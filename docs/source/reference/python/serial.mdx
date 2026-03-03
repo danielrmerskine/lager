@@ -1,0 +1,261 @@
+---
+title: Serial
+description: Native pyserial support for serial communication
+---
+
+Native `pyserial` support for serial communication with your DUT.
+
+## Import
+
+```python
+import serial
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `Serial()` | Create serial connection |
+| `readline()` | Read a line |
+| `read()` | Read specified bytes |
+| `read_until()` | Read until delimiter |
+| `write()` | Write data |
+| `open()` | Open connection |
+| `close()` | Close connection |
+| `is_open` | Check connection state |
+
+## Method Reference
+
+### `serial.Serial(port, baudrate, **kwargs)`
+
+Create a serial connection.
+
+```python
+import serial
+
+ser = serial.Serial('/dev/ttyUSB1', 115200)
+
+# With additional parameters
+ser = serial.Serial(
+    port='/dev/ttyUSB1',
+    baudrate=115200,
+    timeout=60,
+    bytesize=serial.EIGHTBITS,
+    parity=serial.PARITY_NONE,
+    stopbits=serial.STOPBITS_ONE
+)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `port` | `str` | Serial port path (e.g., `/dev/ttyUSB1`) |
+| `baudrate` | `int` | Baud rate in bits per second |
+| `timeout` | `float` | Read timeout in seconds |
+| `bytesize` | `int` | Data bits (5, 6, 7, or 8) |
+| `parity` | `str` | Parity (`PARITY_NONE`, `PARITY_EVEN`, `PARITY_ODD`) |
+| `stopbits` | `int` | Stop bits (1, 1.5, or 2) |
+
+**Returns:** `Serial` object
+
+### `readline()`
+
+Read a line from the serial port.
+
+```python
+line = ser.readline()
+print(f"Received: {line.decode('utf-8').strip()}")
+```
+
+**Returns:** `bytes` - The received line
+
+### `read(size)`
+
+Read a specified number of bytes.
+
+```python
+data = ser.read(10)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `size` | `int` | Number of bytes to read |
+
+**Returns:** `bytes` - The received data
+
+### `read_until(expected=b'\n', size=None)`
+
+Read until expected sequence is found.
+
+```python
+line = ser.read_until(b'\n')
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `expected` | `bytes` | Sequence to read until |
+| `size` | `int` | Maximum bytes to read |
+
+**Returns:** `bytes` - Data up to expected sequence
+
+### `write(data)`
+
+Write data to the serial port.
+
+```python
+ser.write(b'AT+VER\r\n')
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `bytes` | Data to write |
+
+**Returns:** `int` - Number of bytes written
+
+### `close()`
+
+Close the serial connection.
+
+```python
+ser.close()
+```
+
+### `is_open`
+
+Check if connection is open.
+
+```python
+if ser.is_open:
+    print("Connected")
+```
+
+**Returns:** `bool` - True if connection is open
+
+## Examples
+
+### Basic Communication
+
+```python
+import serial
+import time
+
+ser = serial.Serial('/dev/ttyUSB1', 115200, timeout=60)
+
+# Send command
+ser.write(b'AT+VER\r\n')
+time.sleep(0.1)
+
+# Read response
+response = ser.readline()
+print(f"Response: {response.decode('utf-8').strip()}")
+
+ser.close()
+```
+
+### Interactive Session
+
+```python
+import serial
+
+def interactive_session(port, baudrate=115200):
+    ser = serial.Serial(port, baudrate, timeout=1)
+    print(f"Connected to {port}")
+
+    while True:
+        try:
+            # Read any available data
+            if ser.in_waiting:
+                data = ser.read(ser.in_waiting)
+                print(data.decode('utf-8'), end='')
+
+            # Get user input
+            command = input()
+            if command.lower() == 'quit':
+                break
+
+            ser.write(f"{command}\r\n".encode('utf-8'))
+
+        except KeyboardInterrupt:
+            break
+
+    ser.close()
+```
+
+### Data Logging
+
+```python
+import serial
+import time
+from datetime import datetime
+
+def log_serial(port, log_file, duration=60):
+    ser = serial.Serial(port, 115200, timeout=1)
+
+    with open(log_file, 'w') as f:
+        start = time.time()
+
+        while time.time() - start < duration:
+            if ser.in_waiting:
+                data = ser.read(ser.in_waiting)
+                timestamp = datetime.now().isoformat()
+                f.write(f"[{timestamp}] {data.decode('utf-8')}")
+                f.flush()
+
+            time.sleep(0.1)
+
+    ser.close()
+```
+
+### Command/Response Pattern
+
+```python
+import serial
+import time
+
+class SerialDevice:
+    def __init__(self, port, baudrate=115200):
+        self.ser = serial.Serial(port, baudrate, timeout=60)
+
+    def send_command(self, command, timeout=5):
+        self.ser.reset_input_buffer()
+        self.ser.write(f"{command}\r\n".encode('utf-8'))
+
+        response = ""
+        start = time.time()
+
+        while time.time() - start < timeout:
+            if self.ser.in_waiting:
+                line = self.ser.readline().decode('utf-8').strip()
+                response += line + "\n"
+
+            time.sleep(0.1)
+
+        return response
+
+    def close(self):
+        self.ser.close()
+
+# Usage
+device = SerialDevice('/dev/ttyUSB1')
+response = device.send_command('AT+VER')
+print(response)
+device.close()
+```
+
+## Hardware Integration
+
+| Connection | Description |
+|------------|-------------|
+| Raw UART | Direct TX/RX line connections |
+| USB CDC | Virtual serial over USB |
+| Flow Control | Hardware (RTS/CTS) and software (XON/XOFF) |
+
+## Notes
+
+- Lager supports native `pyserial` for serial communication
+- Serial ports are designated during Lager setup configuration
+- Supports both raw UART and USB CDC connections
+- Default baud rate is 115200
+- Always handle `SerialException` errors appropriately
+- Use `decode('utf-8')` for string conversion

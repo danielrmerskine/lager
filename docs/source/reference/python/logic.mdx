@@ -1,0 +1,514 @@
+---
+title: Logic Analyzer (Preview)
+description: Digital signal capture and protocol decoding
+---
+
+Capture and analyze digital signals using the logic analyzer functionality of mixed-signal oscilloscopes.
+
+<Warning>
+**Not Yet Available:** The Logic Analyzer Python API for Rigol MSO5000 series is currently under development.
+The Net-based API and associated methods are documented for preview purposes only. The underlying device
+implementation is not yet complete. Attempting to use logic analyzer nets will result in a "method not found"
+error. Check back in a future release for full functionality.
+</Warning>
+
+<Accordion title="Preview: Python API Reference">
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `enable()` | Enable the logic channel display |
+| `disable()` | Disable the logic channel display |
+| `start_capture()` | Start continuous acquisition |
+| `stop_capture()` | Stop acquisition |
+| `start_single_capture()` | Start single-shot capture |
+| `force_trigger()` | Force a trigger event |
+| `set_signal_threshold()` | Set logic level threshold voltage |
+| `display_position()` | Set channel display position |
+| `size_large()` / `size_medium()` / `size_small()` | Set display size |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.Logic)`
+
+Get a logic analyzer net by name.
+
+```python
+from lager import Net, NetType
+
+logic = Net.get('SPI_CLK', type=NetType.Logic)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the logic net |
+| `type` | `NetType` | Must be `NetType.Logic` |
+
+**Returns:** Logic analyzer Net instance
+
+### `enable()`
+
+Enable the logic channel display.
+
+```python
+logic.enable()
+```
+
+### `disable()`
+
+Disable the logic channel display.
+
+```python
+logic.disable()
+```
+
+### `start_capture()`
+
+Start continuous waveform acquisition.
+
+```python
+logic.start_capture()
+```
+
+### `stop_capture()`
+
+Stop waveform acquisition.
+
+```python
+logic.stop_capture()
+```
+
+### `start_single_capture()`
+
+Start single-shot capture (captures one triggered event).
+
+```python
+logic.start_single_capture()
+```
+
+### `force_trigger()`
+
+Force a trigger event immediately.
+
+```python
+logic.force_trigger()
+```
+
+### `set_signal_threshold(voltage)`
+
+Set the logic level threshold voltage.
+
+```python
+logic.set_signal_threshold(1.65)  # 1.65V for 3.3V CMOS
+logic.set_signal_threshold(2.5)   # 2.5V for 5V TTL
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `voltage` | `float` | Threshold voltage in volts |
+
+**Note:** Channels 0-7 share one threshold, channels 8-15 share another.
+
+### `display_position(position)`
+
+Set the channel display position.
+
+```python
+logic.display_position(100)  # Set vertical position
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `position` | `int` | Vertical position value |
+
+### `size_large()` / `size_medium()` / `size_small()`
+
+Set the display size for enabled channels.
+
+```python
+logic.size_large()   # Maximum visibility
+logic.size_medium()  # Balanced
+logic.size_small()   # Compact view
+```
+
+## Trigger Settings
+
+Logic analyzer nets support advanced triggering through `trigger_settings`:
+
+### Edge Trigger
+
+```python
+logic = Net.get('SPI_CLK', type=NetType.Logic)
+
+# Set edge trigger on this channel
+logic.trigger_settings.edge.set_source(logic)
+logic.trigger_settings.edge.set_slope_rising()
+logic.trigger_settings.set_mode_normal()
+```
+
+**Edge trigger methods:**
+
+| Method | Description |
+|--------|-------------|
+| `edge.set_source(net)` | Set trigger source net |
+| `edge.set_slope_rising()` | Trigger on rising edge |
+| `edge.set_slope_falling()` | Trigger on falling edge |
+| `edge.set_slope_both()` | Trigger on either edge |
+| `edge.get_slope()` | Get current slope setting |
+
+### Pulse Trigger
+
+```python
+logic = Net.get('PULSE_SIG', type=NetType.Logic)
+
+# Trigger on pulse width > 1ms
+logic.trigger_settings.pulse.set_source(logic)
+logic.trigger_settings.pulse.set_trigger_on_pulse_greater_than_width(0.001)
+
+# Trigger on pulse width < 100us
+logic.trigger_settings.pulse.set_trigger_on_pulse_less_than_width(0.0001)
+```
+
+### Protocol Triggers
+
+#### UART Trigger
+
+```python
+logic = Net.get('UART_TX', type=NetType.Logic)
+
+logic.trigger_settings.uart.set_source(logic)
+logic.trigger_settings.uart.set_uart_params(baud=115200, bits=8, parity=None, stopbits=1)
+
+# Trigger on start bit
+logic.trigger_settings.uart.set_trigger_on_start()
+
+# Trigger on specific data
+logic.trigger_settings.uart.set_trigger_on_data(data=0x55)
+
+# Trigger on frame error
+logic.trigger_settings.uart.set_trigger_on_frame_error()
+```
+
+#### I2C Trigger
+
+```python
+scl = Net.get('I2C_SCL', type=NetType.Logic)
+sda = Net.get('I2C_SDA', type=NetType.Logic)
+
+scl.trigger_settings.i2c.set_source(net_scl=scl, net_sda=sda)
+
+# Trigger on start condition
+scl.trigger_settings.i2c.set_trigger_on_start()
+
+# Trigger on specific address
+scl.trigger_settings.i2c.set_trigger_on_address(bits=7, address=0x48)
+
+# Trigger on NACK
+scl.trigger_settings.i2c.set_trigger_on_nack()
+```
+
+#### SPI Trigger
+
+```python
+clk = Net.get('SPI_CLK', type=NetType.Logic)
+mosi = Net.get('SPI_MOSI', type=NetType.Logic)
+cs = Net.get('SPI_CS', type=NetType.Logic)
+
+clk.trigger_settings.spi.set_source(net_sck=clk, net_mosi_miso=mosi, net_cs=cs)
+clk.trigger_settings.spi.set_clk_edge_positive()
+
+# Trigger on specific data
+clk.trigger_settings.spi.set_trigger_data(bits=8, data=0xAA)
+
+# Trigger on CS
+clk.trigger_settings.spi.set_trigger_on_cs_low()
+```
+
+#### CAN Trigger
+
+```python
+can = Net.get('CAN_RX', type=NetType.Logic)
+
+can.trigger_settings.can.set_source(can)
+can.trigger_settings.can.set_baud(500000)
+
+# Trigger on start of frame
+can.trigger_settings.can.set_trigger_on_sof()
+
+# Trigger on error frame
+can.trigger_settings.can.set_trigger_on_error_frame()
+```
+
+## Measurements
+
+Logic analyzer nets support digital timing measurements:
+
+```python
+logic = Net.get('CLK', type=NetType.Logic)
+
+# Frequency and period
+freq = logic.measurement.frequency()
+period = logic.measurement.period()
+
+# Pulse measurements
+pos_width = logic.measurement.pulse_width_positive()
+neg_width = logic.measurement.pulse_width_negative()
+pos_duty = logic.measurement.duty_cycle_positive()
+neg_duty = logic.measurement.duty_cycle_negative()
+
+# Rise/fall times
+rise = logic.measurement.rise_time()
+fall = logic.measurement.fall_time()
+
+# Edge counts
+pos_edges = logic.measurement.positive_edge_count()
+neg_edges = logic.measurement.negative_edge_count()
+```
+
+## Bus Decoding
+
+For protocol analysis, create bus decoders using multiple logic channels:
+
+### UART Bus
+
+```python
+from lager.nets.mappers.rigol_mso5000 import BusUART_RigolMSO5000FunctionMapper
+
+tx = Net.get('UART_TX', type=NetType.Logic)
+rx = Net.get('UART_RX', type=NetType.Logic)
+
+bus = BusUART_RigolMSO5000FunctionMapper(tx=tx, rx=rx)
+bus.set_baud(115200)
+bus.set_data_bits(8)
+bus.set_parity_none()
+bus.set_stop_bits(1)
+
+bus.enable()
+bus.show_table()
+```
+
+### I2C Bus
+
+```python
+from lager.nets.mappers.rigol_mso5000 import BusI2C_RigolMSO5000FunctionMapper
+
+scl = Net.get('I2C_SCL', type=NetType.Logic)
+sda = Net.get('I2C_SDA', type=NetType.Logic)
+
+bus = BusI2C_RigolMSO5000FunctionMapper(scl=scl, sda=sda)
+bus.set_signal_threshold(sda=1.5, scl=1.5)
+
+bus.enable()
+bus.show_table()
+```
+
+### SPI Bus
+
+```python
+from lager.nets.mappers.rigol_mso5000 import BusSPI_RigolMSO5000FunctionMapper
+
+clk = Net.get('SPI_CLK', type=NetType.Logic)
+mosi = Net.get('SPI_MOSI', type=NetType.Logic)
+miso = Net.get('SPI_MISO', type=NetType.Logic)
+cs = Net.get('SPI_CS', type=NetType.Logic)
+
+bus = BusSPI_RigolMSO5000FunctionMapper(clk=clk, mosi=mosi, miso=miso, cs=cs)
+bus.set_sck_phase_rising_edge()
+bus.set_data_width(8)
+bus.set_endianness_msb()
+
+bus.enable()
+bus.show_table()
+```
+
+### CAN Bus
+
+```python
+from lager.nets.mappers.rigol_mso5000 import BusCAN_RigolMSO5000FunctionMapper
+
+can_net = Net.get('CAN_RX', type=NetType.Logic)
+
+bus = BusCAN_RigolMSO5000FunctionMapper(can=can_net)
+bus.set_baud(500000)
+bus.set_signal_type_rx()
+bus.set_signal_threshold(2.0)
+
+bus.enable()
+bus.show_table()
+```
+
+## Examples
+
+### Basic Digital Signal Capture
+
+```python
+from lager import Net, NetType
+import time
+
+# Get logic channel
+clk = Net.get('SYS_CLK', type=NetType.Logic)
+
+# Configure
+clk.enable()
+clk.set_signal_threshold(1.65)  # 3.3V logic
+clk.size_medium()
+
+# Set trigger
+clk.trigger_settings.edge.set_source(clk)
+clk.trigger_settings.edge.set_slope_rising()
+clk.trigger_settings.set_mode_normal()
+
+# Capture
+clk.start_capture()
+time.sleep(1)
+
+# Measure
+freq = clk.measurement.frequency()
+print(f"Clock frequency: {freq / 1e6:.3f} MHz")
+
+clk.stop_capture()
+clk.disable()
+```
+
+### SPI Communication Test
+
+```python
+from lager import Net, NetType
+from lager.nets.mappers.rigol_mso5000 import BusSPI_RigolMSO5000FunctionMapper
+import time
+
+# Get SPI signals
+clk = Net.get('SPI_CLK', type=NetType.Logic)
+mosi = Net.get('SPI_MOSI', type=NetType.Logic)
+miso = Net.get('SPI_MISO', type=NetType.Logic)
+cs = Net.get('SPI_CS', type=NetType.Logic)
+
+# Enable channels
+for net in [clk, mosi, miso, cs]:
+    net.enable()
+    net.set_signal_threshold(1.65)
+
+# Create bus decoder
+bus = BusSPI_RigolMSO5000FunctionMapper(clk=clk, mosi=mosi, miso=miso, cs=cs)
+bus.set_sck_phase_rising_edge()
+bus.set_data_width(8)
+bus.enable()
+bus.show_table()
+
+# Trigger on CS going low
+clk.trigger_settings.spi.set_trigger_on_cs_low()
+clk.trigger_settings.set_mode_single()
+
+# Start capture
+clk.start_single_capture()
+
+# Wait for trigger or timeout
+time.sleep(5)
+
+# View decoded data in table
+print("SPI transaction captured - check scope display")
+
+# Clean up
+bus.disable()
+for net in [clk, mosi, miso, cs]:
+    net.disable()
+```
+
+### I2C Address Scanner
+
+```python
+from lager import Net, NetType
+import time
+
+scl = Net.get('I2C_SCL', type=NetType.Logic)
+sda = Net.get('I2C_SDA', type=NetType.Logic)
+
+scl.enable()
+sda.enable()
+scl.set_signal_threshold(1.65)
+sda.set_signal_threshold(1.65)
+
+# Configure I2C trigger
+scl.trigger_settings.i2c.set_source(net_scl=scl, net_sda=sda)
+scl.trigger_settings.i2c.set_scl_trigger_level(1.65)
+scl.trigger_settings.i2c.set_sda_trigger_level(1.65)
+
+# Trigger on start condition to capture all traffic
+scl.trigger_settings.i2c.set_trigger_on_start()
+scl.trigger_settings.set_mode_normal()
+
+scl.start_capture()
+print("Monitoring I2C bus - trigger on start condition")
+
+# Let it run and capture activity
+time.sleep(10)
+
+scl.stop_capture()
+scl.disable()
+sda.disable()
+```
+
+### Protocol Timing Verification
+
+```python
+from lager import Net, NetType
+
+# Test UART timing
+uart_tx = Net.get('UART_TX', type=NetType.Logic)
+uart_tx.enable()
+uart_tx.set_signal_threshold(1.65)
+
+uart_tx.start_capture()
+
+# Measure bit timing
+period = uart_tx.measurement.period()
+if period:
+    measured_baud = 1.0 / period
+    expected_baud = 115200
+    error_pct = abs(measured_baud - expected_baud) / expected_baud * 100
+
+    print(f"Measured baud: {measured_baud:.0f}")
+    print(f"Expected baud: {expected_baud}")
+    print(f"Error: {error_pct:.2f}%")
+
+    if error_pct < 3:
+        print("PASS: Baud rate within tolerance")
+    else:
+        print("FAIL: Baud rate out of tolerance")
+
+uart_tx.stop_capture()
+uart_tx.disable()
+```
+
+## Digital Channels
+
+| Channel | Range |
+|---------|-------|
+| D0-D7 | Pod 1 (shared threshold) |
+| D8-D15 | Pod 2 (shared threshold) |
+
+## Supported Hardware
+
+| Manufacturer | Model | Features |
+|--------------|-------|----------|
+| Rigol | MSO5000 series | 16 digital channels, protocol decode |
+
+## Notes
+
+- Logic channels are numbered D0-D15
+- Channels D0-D7 share one threshold voltage, D8-D15 share another
+- Protocol decoding requires enabling bus analysis mode
+- Use `NetType.Logic` for digital channels, `NetType.Analog` for analog
+- Bus decoders work with both Logic and Analog nets as sources
+- The trigger can use any combination of analog and digital channels
+
+</Accordion>

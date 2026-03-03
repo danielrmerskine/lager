@@ -1,0 +1,53 @@
+---
+title: "Version 0.2.35"
+description: "December 17, 2025"
+---
+
+## <u>Features</u>
+
+### Python API Function Renaming
+- Renamed 14 Python API functions for improved clarity and consistency
+- Updated documentation to reflect new function names
+
+## <u>Bug Fixes</u>
+
+### ARM/Robot API
+- Fixed serial port hangs by adding proper timeout handling
+- Fixed position polling with buffer clearing and reduced frequency
+- Fixed CLI to close serial port after commands complete
+- Fixed movement commands to not wait for 'ok' response
+- Removed problematic reset_input_buffer() calls that caused hangs
+
+### Battery API
+- Fixed Battery API mapper to properly delegate to Keithley methods
+- Fixed device name conflict issues
+- Fixed class alias placement
+
+### Other Fixes
+- Fixed Webcam API
+- Fixed `lager update` command
+- Fixed GDB `read_memory` response parsing
+
+## <u>Improvements</u>
+
+### Code Cleanup
+- Removed unused modules and deprecated code
+- Updated documentation and Python API
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.2.35
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.2.35/)

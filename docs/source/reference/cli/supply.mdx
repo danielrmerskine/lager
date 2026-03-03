@@ -1,0 +1,413 @@
+---
+title: Power Supply
+description: Control power supply on box
+---
+
+Control and monitor power supply Nets through the Lager CLI. Supports multi-vendor bench power supplies with voltage/current setting, protection thresholds, real-time monitoring via TUI, and concurrent access.
+
+## Syntax
+
+```bash
+lager supply [OPTIONS] NET_NAME COMMAND [ARGS]...
+```
+
+When invoked without a subcommand, lists all available power supply nets on the box:
+
+```bash
+lager supply --box my-box
+```
+
+```
+Name          Net Type       Instrument     Channel  Address
+================================================================
+PSU_CH1       power-supply   Rigol_DP832    CH1      USB0::0x1AB1::0x0E11::DP8...
+PSU_CH2       power-supply   Rigol_DP832    CH2      USB0::0x1AB1::0x0E11::DP8...
+DUT_POWER     power-supply   Keysight_E36312A  1     USB0::0x2A8D::0x1602::...
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `voltage` | Set or read output voltage with optional protection thresholds |
+| `current` | Set or read output current with optional protection thresholds |
+| `enable` | Enable power output (requires confirmation) |
+| `disable` | Disable power output (requires confirmation) |
+| `state` | Show current power state including measurements and protection status |
+| `clear-ovp` | Clear over-voltage protection fault |
+| `clear-ocp` | Clear over-current protection fault |
+| `set` | Set power supply mode |
+| `tui` | Launch interactive terminal UI for real-time monitoring and control |
+
+## CLI Validation Ranges
+
+The CLI enforces conservative upper bounds before sending commands to hardware:
+
+| Parameter | Maximum | Notes |
+|-----------|---------|-------|
+| Voltage | 100.0 V | Most bench supplies are 30-60 V |
+| Current | 30.0 A | Typical bench supply limit |
+| OVP | 110.0 V | Can be slightly above max output |
+| OCP | 33.0 A | Can be slightly above max output |
+
+All values must be positive. OVP must be greater than or equal to the voltage setpoint.
+
+## Command Reference
+
+### `voltage`
+
+Set or read output voltage with optional protection thresholds.
+
+```bash
+lager supply NET_NAME voltage [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `VALUE` - Voltage in volts. Omit to read the current voltage setting.
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--ovp FLOAT` | Volts | Over-voltage protection threshold (must be >= voltage) |
+| `--ocp FLOAT` | Amps | Over-current protection threshold |
+| `--yes` | Flag | Apply without confirmation prompt |
+| `--box TEXT` | String | Lagerbox name or IP |
+
+When VALUE is provided, the CLI prompts for confirmation unless `--yes` is passed:
+
+```
+Set voltage to 3.3 V? [y/N]:
+```
+
+**Examples:**
+
+```bash
+# Read current voltage
+lager supply PSU voltage
+
+# Set voltage to 3.3V (will prompt for confirmation)
+lager supply PSU voltage 3.3
+
+# Set voltage with automatic confirmation
+lager supply PSU voltage 3.3 --yes
+
+# Set voltage with OVP and OCP thresholds
+lager supply PSU voltage 3.3 --ovp 3.6 --ocp 0.5 --yes
+```
+
+### `current`
+
+Set or read output current with optional protection thresholds.
+
+```bash
+lager supply NET_NAME current [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `VALUE` - Current in amps. Omit to read the current limit setting.
+
+**Options:**
+
+| Option | Type | Description |
+|--------|------|-------------|
+| `--ovp FLOAT` | Volts | Over-voltage protection threshold |
+| `--ocp FLOAT` | Amps | Over-current protection threshold (must be >= current) |
+| `--yes` | Flag | Apply without confirmation prompt |
+| `--box TEXT` | String | Lagerbox name or IP |
+
+When VALUE is provided, the CLI prompts for confirmation unless `--yes` is passed:
+
+```
+Set current to 1.0 A? [y/N]:
+```
+
+**Examples:**
+
+```bash
+# Read current limit
+lager supply PSU current
+
+# Set current limit to 1A
+lager supply PSU current 1.0 --yes
+
+# Set current with protection thresholds
+lager supply PSU current 1.0 --ocp 1.2 --ovp 5.0 --yes
+```
+
+### `enable`
+
+Enable power output to device. Requires confirmation to prevent accidental power-on.
+
+```bash
+lager supply NET_NAME enable [OPTIONS]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--yes` | Enable without confirmation prompt |
+| `--box TEXT` | Lagerbox name or IP |
+
+```
+Enable Net? [y/N]:
+```
+
+### `disable`
+
+Disable power output. Requires confirmation to prevent accidental power-off.
+
+```bash
+lager supply NET_NAME disable [OPTIONS]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--yes` | Disable without confirmation prompt |
+| `--box TEXT` | Lagerbox name or IP |
+
+```
+Disable Net? [y/N]:
+```
+
+### `state`
+
+Show comprehensive power supply state including measurements, setpoints, and protection status.
+
+```bash
+lager supply NET_NAME state [--box TEXT]
+```
+
+**Example output (Rigol DP800):**
+
+```
+Channel: CH1
+Enabled: ON
+Mode: CV
+Voltage: 3.3000
+Current: 0.1520
+Power: 0.5016
+OCP Limit: 1.0000
+    OCP Tripped: NO
+OVP Limit: 3.6000
+    OVP Tripped: NO
+```
+
+Fields:
+- **Channel** - Active channel on multi-channel supplies
+- **Enabled** - Output ON or OFF
+- **Mode** - CV (constant voltage) or CC (constant current)
+- **Voltage/Current/Power** - Live measurements (4 decimal places)
+- **OCP/OVP Limit** - Protection thresholds
+- **OCP/OVP Tripped** - Whether protection has triggered (color-coded: green=NO, red=YES)
+
+### `clear-ovp`
+
+Clear over-voltage protection fault. Use after an OVP trip to reset the protection and allow the output to be re-enabled.
+
+```bash
+lager supply NET_NAME clear-ovp [--box TEXT]
+```
+
+### `clear-ocp`
+
+Clear over-current protection fault. Use after an OCP trip to reset the protection and allow the output to be re-enabled.
+
+```bash
+lager supply NET_NAME clear-ocp [--box TEXT]
+```
+
+### `set`
+
+Set power supply mode. The available modes depend on the hardware.
+
+```bash
+lager supply NET_NAME set [--box TEXT]
+```
+
+### `tui`
+
+Launch an interactive terminal UI for real-time power supply monitoring and control. The TUI provides live-updating measurements, inline command entry, and keyboard shortcuts.
+
+```bash
+lager supply NET_NAME tui [--box TEXT]
+```
+
+Requires the `textual` Python package (`pip install textual`).
+
+**TUI display:**
+- Live voltage, current, and power measurements (updated every second)
+- Output status (ON/OFF) with color coding
+- Mode indicator (CV/CC) with color coding
+- Protection thresholds and trip status
+- Hardware maximum ratings
+- Scrollable command log
+
+**TUI commands** (enter at the prompt):
+
+| Command | Description |
+|---------|-------------|
+| `voltage [VALUE]` | Set or read voltage |
+| `current [VALUE]` | Set or read current limit |
+| `ocp [VALUE]` | Set or read OCP threshold |
+| `ovp [VALUE]` | Set or read OVP threshold |
+| `enable` | Enable output |
+| `disable` | Disable output |
+| `state` | Display current state |
+| `clear-ocp` | Clear OCP trip |
+| `clear-ovp` | Clear OVP trip |
+| `help` | Show available commands |
+| `clear` | Clear the command log |
+| `q` / `quit` / `exit` | Exit the TUI |
+
+**Keyboard shortcuts:**
+
+| Key | Action |
+|-----|--------|
+| `q` | Quit |
+| `Ctrl+C` | Quit |
+| `r` | Refresh display |
+| Up/Down arrows | Navigate command history |
+
+**Concurrent access:** While the TUI is running, other `lager supply` CLI commands (e.g., `lager supply PSU voltage 3.3 --yes`) will automatically route through the TUI's WebSocket connection on port 9000, sharing the USB instrument connection. If the TUI is not running, commands use direct USB access.
+
+## OVP / OCP Protection
+
+Over-voltage protection (OVP) and over-current protection (OCP) thresholds protect your device under test from damage.
+
+**Setting thresholds:**
+
+```bash
+# Set OVP and OCP when setting voltage
+lager supply PSU voltage 3.3 --ovp 3.6 --ocp 0.5 --yes
+
+# Set OCP when setting current
+lager supply PSU current 1.0 --ocp 1.2 --yes
+```
+
+**Validation rules:**
+- All values must be positive
+- OVP must be >= the voltage setpoint
+- OCP must be >= the current setpoint
+- Values are validated against CLI maximum limits before being sent to hardware
+
+**When protection trips:**
+1. The supply output is disabled automatically
+2. `state` shows the tripped status in red
+3. Clear the fault with `clear-ovp` or `clear-ocp`
+4. Re-enable the output with `enable`
+
+**Automatic OVP management (Rigol):** When setting a new voltage that would exceed the current OVP limit, the driver temporarily raises OVP by 10% headroom, sets the new voltage, then restores the desired OVP. This prevents false trips during voltage changes.
+
+## Supported Hardware
+
+| Manufacturer | Model Series | Channels | Specs | Notes |
+|--------------|-------------|----------|-------|-------|
+| Rigol | DP832 / DP832A | 3 | Ch1-2: 30V/3A, Ch3: 5V/3A | Most common |
+| Rigol | DP821 | 2 | Ch1: 60V/1A, Ch2: 8V/10A | |
+| Rigol | DP811 / DP811A | 1 | 20V/10A or 40V/5A (range) | |
+| Keithley | 2281S | 1 | 20V/6A/120W | Battery simulator mode |
+| Keysight | E36200 series | 2 | E36233A: 30V/20A per ch | Dual output |
+| Keysight | E36300 series | 3 | E36311A/12A/13A | Triple output |
+| EA | PSI/EL series | 1 | PSB 10080-60, PSB 10060-60 | Two-quadrant |
+
+Multi-channel supplies use the channel number configured in the net record. Each channel is typically configured as a separate net.
+
+## Default Net
+
+Set a default power supply net to avoid specifying the name each time:
+
+```bash
+lager defaults add --supply-net PSU
+```
+
+Then commands can omit the net name:
+
+```bash
+lager supply voltage 3.3 --yes
+lager supply state
+```
+
+## Examples
+
+```bash
+# List all power supply nets
+lager supply --box my-box
+
+# Set voltage with protection
+lager supply PSU voltage 3.3 --ovp 3.6 --ocp 0.5 --yes
+
+# Set current limit
+lager supply PSU current 1.0 --ocp 1.2 --yes
+
+# Enable output (skip confirmation)
+lager supply PSU enable --yes
+
+# Check state
+lager supply PSU state
+
+# Disable output
+lager supply PSU disable --yes
+
+# Clear protection faults
+lager supply PSU clear-ovp
+lager supply PSU clear-ocp
+
+# Launch interactive TUI
+lager supply PSU tui
+```
+
+### Scripting Example
+
+```bash
+#!/bin/bash
+# Power cycle a device under test
+BOX="my-box"
+NET="DUT_POWER"
+
+lager supply $NET voltage 3.3 --ovp 3.6 --ocp 0.5 --yes --box $BOX
+lager supply $NET enable --yes --box $BOX
+sleep 2
+
+# Run tests while powered
+lager python test_script.py --box $BOX
+
+# Power down
+lager supply $NET disable --yes --box $BOX
+```
+
+## Troubleshooting
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| "Resource busy" | TUI is using the supply's USB connection | Close the TUI (press `q`), then retry |
+| "No route to host" | Box unreachable | Check VPN/Tailscale: `lager hello --box <box>` |
+| Connection refused | Box service not running | Verify box is online: `lager hello --box <box>` |
+| OVP/OCP validation error | Protection threshold below setpoint | Set OVP >= voltage, OCP >= current |
+| "exceeds maximum limit" | Value above CLI safety limits | Check equipment specs; CLI max is 100V / 30A |
+
+## Notes
+
+- All `voltage` and `current` set operations require confirmation (use `--yes` to skip)
+- `enable` and `disable` also require confirmation
+- Net names refer to names assigned when setting up your testbed with `lager nets`
+- The TUI connects via WebSocket (port 9000) for real-time updates
+- Protection thresholds help prevent damage to your device under test
+- Multi-channel supplies: each channel is configured as a separate net
+
+## See Also
+
+- [Battery Simulation](/source/reference/cli/battery) -- Control battery simulators (Keithley 2281S)
+- [Electronic Load](/source/reference/cli/eload) -- Programmable electronic loads
+- [Watt Meter](/source/reference/cli/watt) -- Power measurement with Yocto-Watt and Joulescope
+- [Python Supply API](/source/reference/python/supply) -- Automate power supply control in Python scripts

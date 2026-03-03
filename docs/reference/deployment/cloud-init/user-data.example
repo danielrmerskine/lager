@@ -1,0 +1,63 @@
+#cloud-config
+# Lager Box Cloud-Init Configuration Template
+#
+# This is an example configuration for provisioning a new Lager box.
+# Copy this file to 'user-data' and customize the values below.
+#
+# For more information on cloud-init: https://cloudinit.readthedocs.io/
+
+# System user configuration
+system_info:
+  default_user:
+    name: lagerdata
+    lock_passwd: false
+    gecos: Lager Data
+    groups: [adm, audio, cdrom, dialout, dip, floppy, lxd, netdev, plugdev, sudo, video, docker]
+    sudo: ["ALL=(ALL) NOPASSWD:ALL"]
+    shell: /bin/bash
+
+# Set the password for the default user
+# Generate a password hash with: mkpasswd --method=SHA-512
+# Example: mkpasswd --method=SHA-512 --salt=YOURSALT yourpassword
+chpasswd:
+  expire: false
+  users:
+    - name: lagerdata
+      # REPLACE THIS: Generate your own password hash
+      password: "$6$rounds=4096$YOURSALT$REPLACE_WITH_YOUR_HASHED_PASSWORD"
+
+# SSH configuration
+ssh_pwauth: true
+disable_root: true
+
+# Packages to install
+packages:
+  - curl
+  - git
+  - docker.io
+  - docker-compose
+  - ufw
+
+# Commands to run on first boot
+runcmd:
+  # Enable and start Docker
+  - systemctl enable docker
+  - systemctl start docker
+  - usermod -aG docker lagerdata
+
+  # Install Tailscale (optional - for remote access)
+  # Get your auth key from: https://login.tailscale.com/admin/settings/keys
+  - curl -fsSL https://tailscale.com/install.sh | sh
+  # REPLACE THIS: Use your own Tailscale auth key
+  - tailscale up --authkey=tskey-auth-YOUR_TAILSCALE_AUTH_KEY --accept-routes
+
+  # Configure firewall
+  - ufw default deny incoming
+  - ufw default allow outgoing
+  - ufw allow ssh
+  - ufw allow in on tailscale0 to any port 5000
+  - ufw allow in on tailscale0 to any port 8765
+  - ufw --force enable
+
+# Final message
+final_message: "Lager box provisioning complete after $UPTIME seconds"

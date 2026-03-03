@@ -1,0 +1,242 @@
+---
+title: WiFi
+description: WiFi network management
+---
+
+Manage WiFi network connections on Lager Boxes.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Method Reference
+
+### Getting a WiFi Net
+
+Get a WiFi net instance by name and type.
+
+```python
+from lager import Net, NetType
+
+# Get the WiFi net
+wifi = Net.get('wifi1', type=NetType.Wifi)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Net name (configured in Lager system) |
+| `type` | `NetType` | Must be `NetType.Wifi` |
+
+**Returns:** WiFi net instance with all methods listed below
+
+### Methods
+
+| Method | Description |
+|--------|-------------|
+| `scan()` | Scan for available WiFi networks |
+| `connect(ssid, password)` | Connect to a WiFi network |
+| `status()` | Get current WiFi connection status |
+| `disconnect()` | Disconnect from WiFi network |
+
+### `scan()`
+
+Scan for available WiFi networks.
+
+```python
+from lager import Net, NetType
+
+wifi = Net.get('wifi1', type=NetType.Wifi)
+networks = wifi.scan()
+
+for network in networks:
+    print(f"{network['ssid']}: {network['strength']}%")
+```
+
+**Returns:** `list` of network dicts, each containing:
+- `ssid` - Network name
+- `strength` - Signal strength as percentage (0-100)
+- `security` - Security type ('Open' or 'Secured')
+
+### `connect(ssid, password)`
+
+Connect to a WiFi network.
+
+```python
+from lager import Net, NetType
+
+wifi = Net.get('wifi1', type=NetType.Wifi)
+result = wifi.connect(ssid='MyNetwork', password='secret123')
+
+if result['success']:
+    print(f"Connected: {result['message']}")
+else:
+    print(f"Failed: {result['error']}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `ssid` | `str` | Network name |
+| `password` | `str` | Network password (empty string for open networks) |
+
+**Returns:** `dict` with keys:
+- `success` - Boolean indicating connection success
+- `message` - Success message (when `success` is True)
+- `error` - Error message (when `success` is False)
+
+### `status()`
+
+Get current WiFi connection status.
+
+```python
+from lager import Net, NetType
+
+wifi = Net.get('wifi1', type=NetType.Wifi)
+status = wifi.status()
+
+print(f"Connected: {status['connected']}")
+print(f"SSID: {status['ssid']}")
+```
+
+**Returns:** `dict` containing:
+- `connected` - Boolean indicating connection state
+- `ssid` - Connected network name or 'Not Connected'
+- `strength` - Signal strength percentage (if connected)
+
+### `disconnect()`
+
+Disconnect from WiFi network.
+
+```python
+from lager import Net, NetType
+
+wifi = Net.get('wifi1', type=NetType.Wifi)
+wifi.disconnect()
+```
+
+## Examples
+
+### Scan and Connect
+
+```python
+from lager import Net, NetType
+import time
+
+# Get the WiFi net
+wifi = Net.get('wifi1', type=NetType.Wifi)
+
+# Scan for networks
+networks = wifi.scan()
+
+# Find target network
+for network in networks:
+    if network['ssid'] == 'TestNetwork':
+        print(f"Found: {network['strength']}% signal")
+        break
+
+# Connect
+result = wifi.connect(ssid='TestNetwork', password='password123')
+
+if result['success']:
+    print(f"Connection successful: {result['message']}")
+else:
+    print(f"Connection failed: {result['error']}")
+
+# Wait for connection to stabilize
+time.sleep(5)
+
+# Verify status
+status = wifi.status()
+if status['connected']:
+    print(f"Connected to {status['ssid']}")
+```
+
+### Network Verification Test
+
+```python
+from lager import Net, NetType
+
+def verify_network_visible(expected_ssid):
+    wifi = Net.get('wifi1', type=NetType.Wifi)
+    networks = wifi.scan()
+    ssids = [n['ssid'] for n in networks]
+
+    if expected_ssid in ssids:
+        print(f"PASS: {expected_ssid} is visible")
+        return True
+    else:
+        print(f"FAIL: {expected_ssid} not found")
+        return False
+```
+
+### Signal Strength Test
+
+```python
+from lager import Net, NetType
+
+def check_signal_strength(ssid, min_strength=50):
+    """Check if signal strength meets minimum threshold (0-100%)"""
+    wifi = Net.get('wifi1', type=NetType.Wifi)
+    networks = wifi.scan()
+
+    for network in networks:
+        if network['ssid'] == ssid:
+            strength = network['strength']
+            if strength >= min_strength:
+                print(f"PASS: {ssid} signal {strength}%")
+                return True
+            else:
+                print(f"FAIL: {ssid} signal {strength}% below {min_strength}%")
+                return False
+
+    print(f"FAIL: {ssid} not found")
+    return False
+```
+
+### Connection Test
+
+```python
+from lager import Net, NetType
+import time
+
+def test_wifi_connection(ssid, password):
+    wifi = Net.get('wifi1', type=NetType.Wifi)
+    result = wifi.connect(ssid=ssid, password=password)
+
+    if not result['success']:
+        print(f"FAIL: Connection error - {result['error']}")
+        return False
+
+    time.sleep(5)
+
+    status = wifi.status()
+    if status['connected'] and status['ssid'] == ssid:
+        print(f"PASS: Connected to {ssid}")
+        return True
+
+    print(f"FAIL: Not connected to {ssid}")
+    return False
+```
+
+## Hardware Requirements
+
+| Requirement | Description |
+|-------------|-------------|
+| WiFi Hardware | USB adapter or built-in |
+| Permissions | Root/sudo access required |
+| Supported Security | WPA2, WPA3, Open |
+
+## Notes
+
+- Lager Box must have WiFi hardware
+- Root/sudo access required for most operations
+- WPA2/WPA3 networks supported
+- Open networks require empty password string (`''`)
+- Interface defaults to 'wlan0'
+- `get_wifi_status()` takes no parameters and returns all interfaces
+- Router management requires Asus router with parental control

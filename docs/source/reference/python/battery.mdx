@@ -1,0 +1,351 @@
+---
+title: Battery Simulation
+description: Control battery simulation nets
+---
+
+Simulate battery behavior to test your DUT's response to various charge levels, voltages, and protection events.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+The Net-based API provides methods that can either get or set values. When called without a value parameter, methods read and print the current value. When called with a value, they set it.
+
+| Method | Description |
+|--------|-------------|
+| `mode(mode_type)` | Set or read simulation mode ('static' or 'dynamic') |
+| `set_mode_battery()` | Initialize battery simulation mode |
+| `soc(value)` | Set or read state of charge (0-100%) |
+| `voc(value)` | Set or read open-circuit voltage |
+| `voltage_full(value)` | Set or read full charge voltage |
+| `voltage_empty(value)` | Set or read empty battery voltage |
+| `capacity(value)` | Set or read battery capacity (Ah) |
+| `current_limit(value)` | Set or read current limit (A) |
+| `ovp(value)` | Set or read over-voltage protection threshold |
+| `ocp(value)` | Set or read over-current protection threshold |
+| `model(partnumber)` | Set or read battery model |
+| `enable()` | Enable battery simulation output |
+| `disable()` | Disable battery simulation output |
+| `clear_ovp()` | Clear over-voltage protection fault |
+| `clear_ocp()` | Clear over-current protection fault |
+| `print_state()` | Print comprehensive battery state |
+| `terminal_voltage()` | Read terminal voltage (returns float) |
+| `current()` | Read current (returns float) |
+| `esr()` | Read ESR (returns float) |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.Battery)`
+
+Get a battery simulation net by name.
+
+```python
+from lager import Net, NetType
+
+batt = Net.get('BATT', type=NetType.Battery)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the battery net |
+| `type` | `NetType` | Must be `NetType.Battery` |
+
+**Returns:** Battery simulation Net instance
+
+### `set_mode_battery()`
+
+Initialize the instrument for battery simulation mode.
+
+```python
+batt.set_mode_battery()
+```
+
+### `mode(mode_type=None)`
+
+Set or read the battery simulation mode.
+
+```python
+# Set mode
+batt.mode('static')   # Fixed parameters
+batt.mode('dynamic')  # Parameters evolve based on battery model
+
+# Read mode (prints current mode)
+batt.mode()
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mode_type` | `str` or `None` | 'static' or 'dynamic'. If None, reads current mode. |
+
+### `soc(value=None)`
+
+Set or read the state of charge.
+
+```python
+# Set SOC
+batt.soc(80)  # Set to 80%
+
+# Read SOC (prints current value)
+batt.soc()
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `float` or `None` | State of charge (0-100). Rounded to nearest integer. If None, reads current value. |
+
+### `voc(value=None)`
+
+Set or read the open-circuit voltage.
+
+```python
+# Set VOC
+batt.voc(3.7)  # Set to 3.7V
+
+# Read VOC (prints current value)
+batt.voc()
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `float` or `None` | Voltage in volts. If None, reads current value. |
+
+### `voltage_full(value=None)` / `voltage_empty(value=None)`
+
+Set or read the full/empty battery voltages.
+
+```python
+# Set voltages
+batt.voltage_full(4.2)   # Full charge at 4.2V
+batt.voltage_empty(3.0)  # Empty at 3.0V
+
+# Read voltages
+batt.voltage_full()
+batt.voltage_empty()
+```
+
+### `capacity(value=None)`
+
+Set or read the battery capacity. Must be greater than 0. The instrument may clamp the value to its supported range and will print a warning if the applied value differs.
+
+```python
+# Set capacity
+batt.capacity(2.5)  # 2.5 Ah
+
+# Read capacity
+batt.capacity()
+```
+
+### `current_limit(value=None)`
+
+Set or read the maximum charge/discharge current. Range: 0.001 A to 6.0 A (Keithley 2281S).
+
+```python
+# Set current limit
+batt.current_limit(1.5)  # 1.5A max
+
+# Read current limit
+batt.current_limit()
+```
+
+### `ovp(value=None)` / `ocp(value=None)`
+
+Set or read protection thresholds.
+
+```python
+# Set protection thresholds
+batt.ovp(4.4)  # Over-voltage protection at 4.4V
+batt.ocp(2.0)  # Over-current protection at 2.0A
+
+# Read thresholds
+batt.ovp()
+batt.ocp()
+```
+
+### `model(partnumber=None)`
+
+Set or read the battery model.
+
+```python
+# Set model to discharge (always available)
+batt.model('discharge')
+
+# Or use pre-configured battery models (if available)
+batt.model('18650')   # Requires model saved in slot 1
+batt.model('liion')   # Requires model saved in slot 1
+batt.model('nimh')    # Requires model saved in slot 2
+
+# Read current model
+batt.model()
+```
+
+**Keithley 2281S Battery Models:**
+
+The Keithley 2281S stores battery models in memory slots (0-9):
+
+| Model Alias | Slot | Availability |
+|-------------|------|--------------|
+| `'discharge'` | 0 | Always available (basic constant-voltage simulation) |
+| `'18650'`, `'liion'` | 1 | Requires pre-saved model |
+| `'nimh'` | 2 | Requires pre-saved model |
+| `'nicd'` | 3 | Requires pre-saved model |
+| `'lead-acid'` | 4 | Requires pre-saved model |
+
+**Note:** If a slot is empty, you'll get an error suggesting to use 'discharge' or save a model via the instrument front panel. Use `'discharge'` for basic battery simulation that works on all instruments.
+
+### `enable()` / `disable()`
+
+Enable or disable battery simulation output.
+
+```python
+batt.enable()   # Enable output
+batt.disable()  # Disable output
+```
+
+### `clear_ovp()` / `clear_ocp()`
+
+Clear protection faults.
+
+```python
+batt.clear_ovp()  # Clear over-voltage fault
+batt.clear_ocp()  # Clear over-current fault
+```
+
+### `print_state()`
+
+Print comprehensive battery simulator state.
+
+```python
+batt.print_state()
+# Prints: terminal voltage, current, ESR, SOC, VOC, capacity, protection status
+```
+
+### `terminal_voltage()` / `current()` / `esr()`
+
+Read measurements (return values, don't print).
+
+```python
+v = batt.terminal_voltage()  # Returns terminal voltage in volts
+i = batt.current()           # Returns current in amps
+r = batt.esr()               # Returns ESR in ohms
+
+print(f"Voltage: {v}V, Current: {i}A, ESR: {r} ohms")
+```
+
+**Returns:** `float` - Measurement value
+
+## Examples
+
+### Basic Battery Simulation
+
+```python
+from lager import Net, NetType
+
+# Get battery net
+batt = Net.get('BATT', type=NetType.Battery)
+
+# Initialize and configure
+batt.set_mode_battery()
+batt.mode('static')
+batt.model('discharge')  # Use discharge mode (always available)
+batt.voc(3.7)
+batt.capacity(2.5)
+
+# Enable output
+batt.enable()
+
+# Read state
+batt.print_state()
+print(f"Terminal voltage: {batt.terminal_voltage()}V")
+
+# Disable when done
+batt.disable()
+```
+
+### Simulate Battery Discharge
+
+```python
+from lager import Net, NetType
+import time
+
+batt = Net.get('BATT', type=NetType.Battery)
+batt.set_mode_battery()
+
+# Configure battery parameters
+batt.mode('static')
+batt.model('discharge')
+batt.voc(4.2)
+batt.voltage_full(4.2)
+batt.voltage_empty(3.0)
+batt.capacity(3.0)
+batt.soc(100)  # Start fully charged
+
+batt.enable()
+
+# Simulate discharge by stepping SOC
+for soc_level in [100, 75, 50, 25, 10]:
+    batt.soc(soc_level)
+    time.sleep(0.5)
+    v = batt.terminal_voltage()
+    print(f"SOC: {soc_level}%, Terminal: {v:.2f}V")
+
+batt.disable()
+```
+
+### With Protection Monitoring
+
+```python
+from lager import Net, NetType
+
+batt = Net.get('BATT', type=NetType.Battery)
+batt.set_mode_battery()
+
+# Configure with protection
+batt.model('discharge')
+batt.voc(3.7)
+batt.capacity(2.0)
+batt.ovp(4.3)  # Over-voltage at 4.3V
+batt.ocp(2.0)  # Over-current at 2.0A
+
+batt.enable()
+
+# Monitor
+print(f"Voltage: {batt.terminal_voltage():.2f}V")
+print(f"Current: {batt.current():.3f}A")
+
+# Clear any faults if needed
+batt.clear_ovp()
+batt.clear_ocp()
+
+batt.disable()
+```
+
+## Supported Hardware
+
+| Manufacturer | Model | Features |
+|--------------|-------|----------|
+| Keithley | 2281S | Battery simulation, dynamic modeling |
+
+## Notes
+
+- Call `set_mode_battery()` before using other battery methods
+- Methods like `soc()`, `voc()`, etc. can get or set values depending on whether a value is passed
+- `soc()` values are rounded to the nearest integer before being sent to the instrument
+- Use `mode('static')` for fixed parameters, `mode('dynamic')` for evolving behavior
+- Always call `disable()` when finished
+- `terminal_voltage()`, `current()`, and `esr()` return values (for use in code)
+- `print_state()` prints values (for debugging)
+- Protection thresholds help prevent damage to your DUT
+- Keithley 2281S limits: 0-20 V output, 0.001-6.0 A current, capacity must be > 0
+- OVP range: 0-60 V; OCP range: 0.001-6.0 A

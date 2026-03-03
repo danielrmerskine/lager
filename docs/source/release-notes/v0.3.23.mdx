@@ -1,0 +1,45 @@
+---
+title: "Version 0.3.23"
+description: "February 16, 2026"
+---
+
+## <u>Features</u>
+
+### LabJack Pin Conflict Detection
+
+- Added runtime pin conflict detection for LabJack T7 when multiple subsystems (SPI, I2C, GPIO) use the same physical pin within a single `lager python` script
+- A warning is printed to stderr when overlapping pin usage is detected, helping catch wiring or configuration mistakes early
+- Conflict tracking resets automatically between separate CLI commands
+
+### I2C and SPI Documentation
+
+- Added new CLI reference pages for `lager i2c` and `lager spi` with full subcommand documentation, hex data formats, frequency formats, and troubleshooting guides
+- Added new Python API reference pages for I2C and SPI with method references, output formats, and usage examples
+
+## <u>Improvements</u>
+
+### Documentation Overhaul
+
+- Rewrote CLI reference pages for power supply, oscilloscope, ADC, GPI, GPO, watt meter, debug, python, nets, boxes, hello, defaults, and update commands with detailed options, examples, and supported hardware tables
+- Rewrote Python API reference pages for power supply, ADC, DAC, GPIO, battery, electronic load, watt meter, oscilloscope, and robot arm with full method references and examples
+- Updated all Python API examples to use the `from lager import Net, NetType` import pattern
+- Added new CLI reference pages for terminal, status, install, uninstall, and exec commands
+- Updated getting started guides with improved overview and instrument setup instructions
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.23
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.23/)

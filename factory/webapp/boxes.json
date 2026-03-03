@@ -1,0 +1,8 @@
+{
+  "local": {
+    "name": "BOXNAME",
+    "ip": "host.docker.internal",
+    "ssh_user": "your_user",
+    "container": "lager"
+  }
+}

@@ -1,0 +1,241 @@
+---
+title: GPIO
+description: Control digital input/output pins
+---
+
+Control digital input/output pins for digital signaling and control.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `input()` | Read digital pin state |
+| `output(level)` | Set digital pin state |
+| `wait_for_level(level, ...)` | Wait for pin to reach a target level |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.GPIO)`
+
+Get a GPIO net by name.
+
+```python
+from lager import Net, NetType
+
+pin = Net.get('LED', type=NetType.GPIO)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the GPIO net |
+| `type` | `NetType` | Must be `NetType.GPIO` |
+
+**Returns:** GPIO Net instance
+
+### `input()`
+
+Read the digital state of the pin.
+
+```python
+from lager import Net, NetType
+
+pin = Net.get('BUTTON', type=NetType.GPIO)
+state = pin.input()
+
+if state:
+    print("Pin is HIGH")
+else:
+    print("Pin is LOW")
+```
+
+**Returns:** `int` - 0 for LOW, 1 for HIGH
+
+### `output(level)`
+
+Set the digital state of the pin.
+
+```python
+from lager import Net, NetType
+
+pin = Net.get('LED', type=NetType.GPIO)
+
+# Set HIGH
+pin.output(1)
+
+# Set LOW
+pin.output(0)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `level` | `int` or `str` | 0/1, "low"/"high", "off"/"on", "true"/"false" |
+
+### `wait_for_level(level, timeout=None, ...)`
+
+Wait for the pin to reach a target level. Blocks until the pin reads the specified level or the timeout expires.
+
+The LabJack T7 uses hardware streaming at up to 20 kHz for fast edge detection. Other hardware uses software polling.
+
+```python
+from lager import Net, NetType
+
+pin = Net.get('INTERRUPT', type=NetType.GPIO)
+
+# Wait for pin to go HIGH (block forever)
+elapsed = pin.wait_for_level(1)
+print(f"Pin went HIGH after {elapsed:.3f}s")
+
+# Wait with timeout
+try:
+    elapsed = pin.wait_for_level(0, timeout=5.0)
+    print(f"Pin went LOW after {elapsed:.3f}s")
+except TimeoutError:
+    print("Timed out waiting for pin")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `level` | `int` or `str` | required | Target level: 0/1, "low"/"high", "off"/"on" |
+| `timeout` | `float` or `None` | `None` | Maximum seconds to wait. `None` = wait forever. |
+| `scan_rate` | `int` | `20000` | Sample rate in Hz (LabJack T7 only) |
+| `scans_per_read` | `int` | `2` | Batch size per read (LabJack T7 only; lower = faster reaction) |
+| `poll_interval` | `float` | `0.01` | Seconds between polls (non-LabJack hardware only) |
+
+**Returns:** `float` - Elapsed time in seconds until the level was detected
+
+**Raises:** `TimeoutError` if the timeout expires before the target level is reached
+
+**Hardware-specific behavior:**
+
+| Hardware | Method | Default Rate |
+|----------|--------|-------------|
+| LabJack T7 | Hardware streaming (`ljm.eStreamStart`) | 20,000 Hz |
+| USB-202 | Software polling | 100 Hz (10 ms interval) |
+
+## Examples
+
+### Read Button State
+
+```python
+from lager import Net, NetType
+
+button = Net.get('BUTTON', type=NetType.GPIO)
+
+state = button.input()
+if state:
+    print("Button pressed")
+else:
+    print("Button released")
+```
+
+### Control LED
+
+```python
+from lager import Net, NetType
+
+led = Net.get('LED', type=NetType.GPIO)
+
+# Turn on
+led.output(1)
+
+# Turn off
+led.output(0)
+```
+
+### Wait for Interrupt
+
+```python
+from lager import Net, NetType
+
+irq_pin = Net.get('INTERRUPT', type=NetType.GPIO)
+
+# Wait for interrupt (rising edge)
+try:
+    elapsed = irq_pin.wait_for_level(1, timeout=10.0)
+    print(f"Interrupt detected after {elapsed:.3f}s")
+except TimeoutError:
+    print("No interrupt within 10 seconds")
+```
+
+### Button-Controlled LED
+
+```python
+from lager import Net, NetType
+import time
+
+button = Net.get('BUTTON', type=NetType.GPIO)
+led = Net.get('LED', type=NetType.GPIO)
+
+print("Press Ctrl+C to exit")
+
+while True:
+    try:
+        if button.input():
+            led.output(1)
+        else:
+            led.output(0)
+        time.sleep(0.1)
+    except KeyboardInterrupt:
+        led.output(0)
+        break
+```
+
+### Toggle Output
+
+```python
+from lager import Net, NetType
+import time
+
+output_pin = Net.get('SIGNAL', type=NetType.GPIO)
+
+# Generate 10 pulses
+for i in range(10):
+    output_pin.output(1)
+    time.sleep(0.5)
+    output_pin.output(0)
+    time.sleep(0.5)
+```
+
+## Supported Hardware
+
+| Hardware | Pins | Logic Level |
+|----------|------|-------------|
+| LabJack T7 | FIO0-FIO7, EIO0-EIO7, CIO0-CIO3 | 3.3V |
+| MCC USB-202 | DIO0-DIO7 | 5V TTL |
+
+### Pin Naming
+
+**LabJack T7:**
+
+| Pin Input | Channel |
+|-----------|---------|
+| `0`-`7` | FIO0-FIO7 |
+| `8`-`15` | EIO0-EIO7 |
+| `16`-`19` | CIO0-CIO3 |
+| `"FIO0"`-`"FIO7"` | FIO0-FIO7 |
+
+**MCC USB-202:**
+
+| Pin Input | Channel |
+|-----------|---------|
+| `0`-`7` | DIO0-DIO7 |
+| `"DIO0"`-`"DIO7"` | DIO0-DIO7 |
+
+## Notes
+
+- GPIO nets work directly without `enable()`/`disable()` calls
+- `input()` returns 0 or 1
+- `output()` accepts integers (0/1) or strings ("high"/"low", "on"/"off", "true"/"false")
+- `wait_for_level()` blocks the calling thread until the target level is detected
+- LabJack T7 `wait_for_level()` uses hardware streaming for sub-millisecond detection
+- Net names must match those configured on the Lager Box

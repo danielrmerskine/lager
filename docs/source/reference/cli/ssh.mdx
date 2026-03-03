@@ -1,0 +1,134 @@
+---
+title: SSH
+description: SSH into a Lager Box
+---
+
+Open an interactive SSH session to a Lagerbox.
+
+## Syntax
+
+```bash
+lager ssh [OPTIONS]
+```
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+
+---
+
+## Usage
+
+```bash
+# SSH to specific Lager Box
+lager ssh --box lab-lager-box
+
+# SSH to default Lager Box
+lager ssh
+```
+
+---
+
+## How It Works
+
+The command:
+1. Resolves the Lager Box name to IP address
+2. Looks up the SSH username (default: `lagerdata`)
+3. Opens an interactive SSH session
+
+---
+
+## Username Resolution
+
+SSH usernames are resolved in order:
+1. Username stored with box configuration (`lager boxes add --user`)
+2. Default username: `lagerdata`
+
+To use a different username for a Lager Box:
+```bash
+# Configure username when adding box
+lager boxes add --name pi-lager-box --ip <BOX_IP> --user pi
+
+# Or edit existing box
+lager boxes edit --name pi-lager-box --user pi
+```
+
+---
+
+## SSH Key Setup
+
+For passwordless access, set up SSH keys:
+
+```bash
+# Generate key if needed
+ssh-keygen -t ed25519
+
+# Copy to Lager Box
+ssh-copy-id lagerdata@<box-ip>
+```
+
+---
+
+## Examples
+
+```bash
+# Quick SSH access
+lager ssh --box lab-lager-box
+
+# Debug container issues
+lager ssh --box lab-lager-box
+docker ps
+docker logs controller
+
+# Check Lager Box status
+lager ssh --box lab-lager-box
+cat /etc/lager/version
+sudo ufw status
+```
+
+---
+
+## Common Tasks via SSH
+
+### Check Container Status
+```bash
+lager ssh --box my-lager-box
+docker ps -a
+docker logs controller --tail 100
+```
+
+### View Lager Box Version
+```bash
+lager ssh --box my-lager-box
+cat /etc/lager/version
+```
+
+### Check Disk Space
+```bash
+lager ssh --box my-lager-box
+df -h
+```
+
+### Restart Containers
+```bash
+lager ssh --box my-lager-box
+cd ~/box
+./start_box.sh
+```
+
+### View Firewall Status
+```bash
+lager ssh --box my-lager-box
+sudo ufw status verbose
+```
+
+---
+
+## Notes
+
+- Opens a fully interactive shell session
+- Uses `os.execvp` for process replacement (full TTY support)
+- Default Lager Box is used if `--box` not specified
+- Exit with `exit` or Ctrl+D

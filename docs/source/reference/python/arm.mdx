@@ -1,0 +1,368 @@
+---
+title: Robot Arm
+description: Control robotic arms for automated positioning and manipulation
+---
+
+Control robotic arms for automated pick-and-place operations, positioning, and test fixture manipulation.
+
+## Import
+
+```python
+from lager import Net, NetType
+
+# For exception handling
+from lager import InvalidNetError
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `position()` | Get current arm position (x, y, z) |
+| `move_to()` | Move to absolute coordinates |
+| `move_relative()` | Move relative to current position |
+| `go_home()` | Return arm to home position |
+| `enable_motor()` | Enable arm motors |
+| `disable_motor()` | Disable arm motors |
+| `save_position()` | Save current position to memory |
+| `get_full_position()` | Get full position including joint angles |
+| `sliding_rail_init()` | Initialize the sliding rail |
+
+## Method Reference
+
+### Getting an Arm Net
+
+Get a robotic arm net instance by name and type.
+
+```python
+from lager import Net, NetType
+
+# Get the arm net
+arm = Net.get('arm1', type=NetType.Arm)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Net name (configured in Lager system) |
+| `type` | `NetType` | Must be `NetType.Arm` |
+
+**Returns:** Arm net instance with all methods listed below
+
+### `position()`
+
+Get the current arm position.
+
+```python
+x, y, z = arm.position()
+print(f"Position: X={x}, Y={y}, Z={z}")
+```
+
+**Returns:** `tuple[float, float, float]` - (x, y, z) coordinates in mm
+
+### `move_to(x, y, z, timeout=15.0)`
+
+Move the arm to absolute coordinates with blocking wait.
+
+```python
+# Move to specific position
+arm.move_to(100, 200, 50)
+
+# Move with longer timeout
+arm.move_to(100, 200, 50, timeout=10.0)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `x` | `float` | Target X coordinate (mm) |
+| `y` | `float` | Target Y coordinate (mm) |
+| `z` | `float` | Target Z coordinate (mm) |
+| `timeout` | `float` | Maximum wait time in seconds (default: 15.0) |
+
+**Raises:** `MovementTimeoutError` if position not reached within timeout
+
+### `move_relative(dx=0, dy=0, dz=0, timeout=15.0)`
+
+Move relative to current position.
+
+```python
+# Move 10mm in X direction
+new_x, new_y, new_z = arm.move_relative(dx=10)
+
+# Move diagonally
+new_x, new_y, new_z = arm.move_relative(dx=10, dy=10, dz=-5)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `dx` | `float` | Relative X movement (mm) |
+| `dy` | `float` | Relative Y movement (mm) |
+| `dz` | `float` | Relative Z movement (mm) |
+| `timeout` | `float` | Maximum wait time (default: 15.0) |
+
+**Returns:** `tuple[float, float, float]` - New (x, y, z) position after move
+
+### `go_home()`
+
+Return the arm to its home position (X=0, Y=300, Z=0).
+
+```python
+arm.go_home()
+```
+
+### `enable_motor()`
+
+Enable the arm motors.
+
+```python
+arm.enable_motor()
+```
+
+### `disable_motor()`
+
+Disable the arm motors (arm will be loose).
+
+```python
+arm.disable_motor()
+```
+
+### `save_position()`
+
+Save the current position to the arm's internal memory.
+
+```python
+arm.save_position()
+```
+
+### `get_full_position()`
+
+Get the full position including joint angles.
+
+```python
+x, y, z, e, a, b, c = arm.get_full_position()
+print(f"Cartesian: ({x}, {y}, {z})")
+print(f"Joint angles: A={a}, B={b}, C={c}")
+```
+
+**Returns:** `tuple[float, ...]` - (x, y, z, e, a, b, c) where a, b, c are joint angles
+
+## End Effector Methods
+
+### Soft Gripper
+
+```python
+arm.soft_gripper_pick()     # Activate gripper to pick
+arm.soft_gripper_place()    # Release gripper to place
+arm.soft_gripper_neutral()  # Return to neutral state
+arm.soft_gripper_stop()     # Stop gripper action
+```
+
+### Air Picker
+
+```python
+arm.air_picker_pick()       # Activate vacuum to pick
+arm.air_picker_place()      # Release vacuum to place
+arm.air_picker_neutral()    # Return to neutral state
+arm.air_picker_stop()       # Stop vacuum action
+```
+
+### Laser Module
+
+```python
+arm.laser_on(value=0)      # Turn laser on with power level
+arm.laser_off()            # Turn laser off
+```
+
+## Conveyor Belt Methods
+
+```python
+arm.conveyor_belt_forward(speed=0)    # Move belt forward (speed 0-100)
+arm.conveyor_belt_backward(speed=0)   # Move belt backward (speed 0-100)
+arm.conveyor_belt_stop()              # Stop belt
+```
+
+## Sliding Rail Methods
+
+```python
+arm.sliding_rail_init()  # Initialize the sliding rail
+```
+
+## Utility Methods
+
+### `delay_ms(value)` / `delay_s(value)`
+
+Add delay to the arm's command queue.
+
+```python
+arm.delay_ms(500)  # 500ms delay
+arm.delay_s(2)     # 2 second delay
+```
+
+### `set_acceleration(acceleration, travel_acceleration, retract_acceleration=60)`
+
+Configure acceleration settings.
+
+```python
+arm.set_acceleration(100, 100, 60)
+```
+
+### `set_module_type(module_type)`
+
+Set the attached module type.
+
+```python
+# 0=PEN, 1=LASER, 2=PNEUMATIC, 3=3D
+arm.set_module_type(0)  # Set to PEN module
+```
+
+### `get_module_type()`
+
+Get the currently detected module type.
+
+```python
+module = arm.get_module_type()
+print(f"Module: {module}")  # 'PEN', 'LASER', 'PUMP', or '3D'
+```
+
+## Examples
+
+### Basic Movement
+
+```python
+from lager import Net, NetType
+
+# Get the arm net
+arm = Net.get('arm1', type=NetType.Arm)
+
+# Go to home position
+arm.go_home()
+
+# Get current position
+x, y, z = arm.position()
+print(f"Home position: ({x}, {y}, {z})")
+
+# Move to test position
+arm.move_to(100, 250, 0)
+
+# Move up
+arm.move_relative(dz=50)
+
+# Return home
+arm.go_home()
+```
+
+### Pick and Place
+
+```python
+from lager import Net, NetType
+
+# Get the arm net
+arm = Net.get('arm1', type=NetType.Arm)
+
+arm.go_home()
+
+# Move to pick position
+arm.move_to(100, 200, 50)     # Above target
+arm.move_relative(dz=-30)     # Lower to pick height
+
+# Pick up object
+arm.soft_gripper_pick()
+arm.delay_ms(500)
+
+# Lift
+arm.move_relative(dz=30)
+
+# Move to place position
+arm.move_to(150, 200, 50)
+arm.move_relative(dz=-30)
+
+# Place object
+arm.soft_gripper_place()
+arm.delay_ms(500)
+
+# Return home
+arm.move_relative(dz=30)
+arm.go_home()
+```
+
+### Automated Test Positioning
+
+```python
+from lager import Net, NetType
+
+# Test positions for probe points
+PROBE_POSITIONS = [
+    (100, 200, -10),  # Test point 1
+    (120, 200, -10),  # Test point 2
+    (140, 200, -10),  # Test point 3
+]
+
+# Get arm and probe nets
+arm = Net.get('arm1', type=NetType.Arm)
+adc = Net.get('PROBE', type=NetType.ADC)
+
+arm.go_home()
+
+results = []
+for i, (x, y, z) in enumerate(PROBE_POSITIONS):
+    # Move above position
+    arm.move_to(x, y, z + 20)
+
+    # Lower probe
+    arm.move_to(x, y, z)
+    arm.delay_ms(200)  # Settle time
+
+    # Take measurement
+    voltage = adc.input()
+    results.append((i, voltage))
+    print(f"Point {i}: {voltage}V")
+
+    # Lift
+    arm.move_relative(dz=20)
+
+arm.go_home()
+```
+
+### Error Handling
+
+```python
+from lager import Net, NetType
+from lager import InvalidNetError
+
+try:
+    arm = Net.get('arm1', type=NetType.Arm)
+    arm.move_to(100, 200, 50, timeout=3.0)
+except InvalidNetError as e:
+    print(f"Arm net not found: {e}")
+except RuntimeError as e:
+    print(f"Movement failed: {e}")
+except Exception as e:
+    print(f"Error: {e}")
+```
+
+## Supported Hardware
+
+| Manufacturer | Model | Features |
+|--------------|-------|----------|
+| Rotrics | Dexarm | 4-axis, multiple end effectors, conveyor support |
+
+## Exceptions
+
+| Exception | Module | Description |
+|-----------|--------|-------------|
+| `MovementTimeoutError` | `lager.arm.arm_net` | Arm didn't reach target position in time |
+| `RuntimeError` | builtin | Arm device not found or cannot be opened |
+
+## Notes
+
+- Always use the context manager (`with` statement) to ensure proper cleanup
+- The arm must be homed before accurate movements
+- Movement timeout errors may indicate obstructions or out-of-bounds coordinates
+- Joint angles (a, b, c) are in the arm's internal coordinate system
+- Default tolerance for position verification is 0.5mm
+- The arm auto-detects via USB VID/PID (0x0483:0x5740)

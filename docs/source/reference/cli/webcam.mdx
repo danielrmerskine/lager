@@ -1,0 +1,177 @@
+---
+title: Webcam
+description: Manage webcam streams on boxes
+---
+
+Control webcam streaming for visual monitoring of devices.
+
+## Syntax
+
+```bash
+lager webcam [NETNAME] COMMAND [OPTIONS]
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `start` | Start webcam stream |
+| `stop` | Stop webcam stream |
+| `url` | Print URLs of all active streams |
+| `start-all` | Start all webcam streams |
+| `stop-all` | Stop all webcam streams |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+
+---
+
+## Command Reference
+
+### `start`
+
+Start a webcam stream.
+
+```bash
+lager webcam CAM1 start --box my-lager-box
+```
+
+### `stop`
+
+Stop a webcam stream.
+
+```bash
+lager webcam CAM1 stop --box my-lager-box
+```
+
+### `url`
+
+Print URLs of all active webcam streams.
+
+```bash
+lager webcam url --box my-lager-box
+```
+
+Output:
+```
+Active webcam streams:
+  CAM1: http://<BOX_IP>:8081/stream
+  CAM2: http://<BOX_IP>:8082/stream
+```
+
+### `start-all`
+
+Start all configured webcam streams.
+
+```bash
+lager webcam start-all --box my-lager-box
+```
+
+### `stop-all`
+
+Stop all webcam streams.
+
+```bash
+lager webcam stop-all --box my-lager-box
+```
+
+---
+
+## Usage
+
+### Basic Workflow
+
+```bash
+# Start a webcam
+lager webcam CAM1 start --box lab-gw
+
+# Get the stream URL
+lager webcam url --box lab-gw
+
+# Open in browser
+# http://<BOX_IP>:8081/stream
+
+# Stop when done
+lager webcam CAM1 stop --box lab-gw
+```
+
+### Multiple Cameras
+
+```bash
+# Start all cameras
+lager webcam start-all --box lab-gw
+
+# View all URLs
+lager webcam url --box lab-gw
+
+# Stop all cameras
+lager webcam stop-all --box lab-gw
+```
+
+---
+
+## Stream Format
+
+Webcam streams are provided as:
+- **HTTP MJPEG streams** for browser viewing
+- **Per-webcam ports** (8081, 8082, etc.)
+- **Device path reporting** for debugging
+
+---
+
+## Use Cases
+
+### Visual Inspection
+
+Monitor physical state of device during testing:
+```bash
+lager webcam BENCH_CAM start
+# Run tests while monitoring
+lager webcam BENCH_CAM stop
+```
+
+### Remote Debugging
+
+View LED states, display outputs, or physical connections:
+```bash
+lager webcam url --box remote-box
+# Open stream in browser
+```
+
+### Documentation
+
+Capture visual evidence of test results:
+```bash
+lager webcam BOARD_VIEW start
+# Capture screenshots from stream
+lager webcam BOARD_VIEW stop
+```
+
+---
+
+## Examples
+
+```bash
+# Set default webcam
+lager defaults add --webcam-net MAIN_CAM
+
+# Quick start/stop
+lager webcam start
+lager webcam stop
+
+# Check status
+lager webcam url
+```
+
+---
+
+## Notes
+
+- Webcams must be connected via USB to the box
+- Each webcam uses a unique port (8081+)
+- Streams are accessible via box IP address
+- Default net can be set with `lager defaults add --webcam-net`
+- USB webcams should be compatible with V4L2

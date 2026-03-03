@@ -1,0 +1,56 @@
+---
+title: "Version 0.3.13"
+description: "January 16, 2026"
+---
+
+## <u>Features</u>
+
+### Lager Terminal - Interactive REPL
+- New `lager terminal` command launches an interactive shell for running Lager commands
+- Tab completion for commands, subcommands, and options
+- Command history with up/down arrow navigation (persisted between sessions)
+- Auto-suggestions from command history as you type
+- Clean ASCII art welcome banner
+- Type `help` for built-in commands, `exit` or `quit` to leave
+
+### Update All Lager Boxes
+- New `lager update --all` flag updates all saved Lager Boxes sequentially
+- New `lager update --all --needs-update` flag only updates Lager Boxes with versions older than your CLI
+- Visual progress bar with elapsed time during updates
+- Summary report showing successful and failed updates
+
+### Live Lager Box Status
+- `lager boxes` now queries all saved Lager Boxes and displays live version status
+- Shows whether each Lager Box is current, needs update, or has a newer version
+- Loading spinner while querying multiple Lager Boxes
+- Summary counts for Lager Boxes needing updates
+
+## <u>Improvements</u>
+
+### Keysight Power Supply Driver Consolidation
+- Merged Keysight E36200 and E36300 series drivers into a unified `keysight_e36000.py` driver
+- Reduced code duplication and simplified maintenance
+- No changes to user-facing commands
+
+### Code Quality
+- Refactored boxes command for better code organization
+- Refactored update command with improved progress tracking
+- Test suite formatting and cleanup
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.13
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.13/)

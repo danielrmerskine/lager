@@ -1,0 +1,255 @@
+---
+title: I2C
+description: Communicate with I2C devices on the bus
+---
+
+Read, write, and scan I2C (Inter-Integrated Circuit) devices connected to a Lager Box.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `config()` | Configure I2C bus parameters |
+| `scan()` | Scan bus for connected devices |
+| `read()` | Read bytes from a device |
+| `write()` | Write bytes to a device |
+| `write_read()` | Write then read in a single transaction (repeated start) |
+| `get_config()` | Get raw net configuration |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.I2C)`
+
+Get an I2C net by name.
+
+```python
+from lager import Net, NetType
+
+i2c = Net.get('MY_I2C_NET', type=NetType.I2C)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the I2C net |
+| `type` | `NetType` | Must be `NetType.I2C` |
+
+**Returns:** I2C Net instance
+
+### `config(frequency_hz, pull_ups)`
+
+Configure I2C bus parameters. Only explicitly-provided parameters are changed; omitted parameters retain their stored values.
+
+```python
+i2c.config(frequency_hz=400_000)
+i2c.config(frequency_hz=100_000, pull_ups=True)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `frequency_hz` | `int` or `None` | Clock frequency in Hz (e.g., 100000, 400000). `None` keeps stored value |
+| `pull_ups` | `bool` or `None` | Enable/disable internal pull-ups (Aardvark only). `None` keeps stored value |
+
+### `scan(start_addr, end_addr)`
+
+Scan the I2C bus for connected devices.
+
+```python
+devices = i2c.scan()
+print(f"Found: {[hex(a) for a in devices]}")
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `start_addr` | `int` | First 7-bit address to probe (default `0x08`) |
+| `end_addr` | `int` | Last 7-bit address to probe (default `0x77`) |
+
+**Returns:** `list[int]` - List of 7-bit addresses that responded with ACK
+
+### `read(address, num_bytes, output_format, overrides)`
+
+Read bytes from an I2C device.
+
+```python
+data = i2c.read(address=0x48, num_bytes=2)
+temp = (data[0] << 8) | data[1]
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `address` | `int` | 7-bit device address (`0x00`-`0x7F`) |
+| `num_bytes` | `int` | Number of bytes to read |
+| `output_format` | `str` | `"list"` (default), `"hex"`, `"bytes"`, or `"json"` |
+| `overrides` | `dict` or `None` | Per-call config overrides (e.g., `{"frequency_hz": 400000}`) |
+
+**Returns:** `list[int]` - Received bytes as integers (when `output_format="list"`)
+
+### `write(address, data, overrides)`
+
+Write bytes to an I2C device.
+
+```python
+i2c.write(address=0x48, data=[0x0A, 0x03])
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `address` | `int` | 7-bit device address (`0x00`-`0x7F`) |
+| `data` | `list[int]` | Bytes to write |
+| `overrides` | `dict` or `None` | Per-call config overrides (e.g., `{"frequency_hz": 400000}`) |
+
+### `write_read(address, data, num_bytes, output_format, overrides)`
+
+Write then read in a single I2C transaction using a repeated start condition. This is the standard pattern for reading device registers.
+
+```python
+# Read 2-byte temperature register at address 0x00
+temp_bytes = i2c.write_read(address=0x48, data=[0x00], num_bytes=2)
+temperature = (temp_bytes[0] << 8) | temp_bytes[1]
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `address` | `int` | 7-bit device address (`0x00`-`0x7F`) |
+| `data` | `list[int]` | Bytes to write before reading (typically a register address) |
+| `num_bytes` | `int` | Number of bytes to read after writing |
+| `output_format` | `str` | `"list"` (default), `"hex"`, `"bytes"`, or `"json"` |
+| `overrides` | `dict` or `None` | Per-call config overrides (e.g., `{"frequency_hz": 400000}`) |
+
+**Returns:** `list[int]` - Received bytes as integers (when `output_format="list"`)
+
+### `get_config()`
+
+Get the raw net configuration dictionary.
+
+```python
+cfg = i2c.get_config()
+print(cfg['name'])
+print(cfg['params'])
+```
+
+**Returns:** `dict` - Full net configuration including name, role, instrument, and params
+
+## Output Formats
+
+The `output_format` parameter on `read()` and `write_read()` controls how data is returned:
+
+| Format | Return Type | Example |
+|--------|-------------|---------|
+| `"list"` | `list[int]` | `[72, 118, 153]` |
+| `"hex"` | `str` | `"48 76 99"` |
+| `"bytes"` | `str` | `"72 118 153"` |
+| `"json"` | `dict` | `{"data": [72, 118, 153]}` |
+
+## Examples
+
+### Basic Device Read
+
+```python
+from lager import Net, NetType
+
+i2c = Net.get('my_i2c', type=NetType.I2C)
+
+# Scan for devices
+devices = i2c.scan()
+print(f"Found devices at: {[hex(a) for a in devices]}")
+
+# Read 2 bytes from device at 0x48
+data = i2c.read(address=0x48, num_bytes=2)
+print(f"Data: {data}")
+```
+
+### Register Read/Write
+
+```python
+from lager import Net, NetType
+
+i2c = Net.get('my_i2c', type=NetType.I2C)
+
+# Write configuration register
+i2c.write(address=0x48, data=[0x01, 0x60, 0xA0])
+
+# Read temperature register (write register addr, then read 2 bytes)
+temp_bytes = i2c.write_read(address=0x48, data=[0x00], num_bytes=2)
+raw = (temp_bytes[0] << 8) | temp_bytes[1]
+celsius = raw / 256.0
+print(f"Temperature: {celsius:.1f} C")
+```
+
+### Bus Configuration
+
+```python
+from lager import Net, NetType
+
+i2c = Net.get('my_i2c', type=NetType.I2C)
+
+# Configure for 400 kHz Fast Mode with pull-ups
+i2c.config(frequency_hz=400_000, pull_ups=True)
+
+# Scan a specific address range
+devices = i2c.scan(start_addr=0x20, end_addr=0x7F)
+for addr in devices:
+    print(f"  0x{addr:02x}")
+```
+
+### Multi-Device Setup
+
+```python
+from lager import Net, NetType
+
+i2c = Net.get('sensor_bus', type=NetType.I2C)
+i2c.config(frequency_hz=100_000)
+
+# Read from multiple sensors on the same bus
+TEMP_SENSOR = 0x48
+PRESSURE_SENSOR = 0x76
+
+# Temperature (TMP102)
+temp_raw = i2c.write_read(address=TEMP_SENSOR, data=[0x00], num_bytes=2)
+temp_c = ((temp_raw[0] << 4) | (temp_raw[1] >> 4)) * 0.0625
+print(f"Temperature: {temp_c:.1f} C")
+
+# Pressure (BMP280) - read chip ID register
+chip_id = i2c.write_read(address=PRESSURE_SENSOR, data=[0xD0], num_bytes=1)
+print(f"BMP280 chip ID: 0x{chip_id[0]:02x}")
+```
+
+### Per-Call Configuration Override
+
+```python
+from lager import Net, NetType
+
+i2c = Net.get('my_i2c', type=NetType.I2C)
+i2c.config(frequency_hz=100_000)
+
+# Most devices use standard mode
+data = i2c.read(address=0x48, num_bytes=2)
+
+# One device needs fast mode for this transaction
+data = i2c.read(address=0x50, num_bytes=256,
+                overrides={"frequency_hz": 400_000})
+```
+
+## Supported Hardware
+
+| Adapter | Description |
+|---------|-------------|
+| LabJack T7 | Uses GPIO pins (FIO/EIO) for SDA and SCL |
+| Aardvark I2C/SPI | Dedicated USB I2C adapter with pull-up support |
+
+## Notes
+
+- Net must be configured as `NetType.I2C`
+- Addresses are 7-bit format (`0x00`-`0x7F`), not left-shifted
+- `pull_ups` only works on the Aardvark adapter; ignored on LabJack T7
+- `write_read()` uses a repeated start condition for atomic register reads
+- Default scan range (`0x08`-`0x77`) skips reserved addresses
+- Configuration changes persist to `saved_nets.json` for subsequent commands
+- LabJack T7 runs at approximately 450 kHz regardless of requested frequency due to hardware limitations

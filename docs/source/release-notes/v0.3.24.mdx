@@ -1,0 +1,38 @@
+---
+title: "Version 0.3.24"
+description: "February 17, 2026"
+---
+
+## <u>Features</u>
+
+### CLI Update Notifications
+
+- The CLI now checks PyPI in the background for newer versions of `lager-cli` and displays a notification after each command when an update is available
+- Checks are cached for 24 hours to avoid unnecessary network requests
+- Can be disabled by setting `LAGER_NO_UPDATE_CHECK=1` or in CI environments
+
+## <u>Bug Fixes</u>
+
+- Fixed duplicate SPI channel entry in LabJack T7 instrument query (`FIO0-FIO3` listed twice)
+
+## <u>Improvements</u>
+
+- Updated SPI and GPIO test scripts to use correct net names matching current Lager Box configuration
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.24
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.24/)

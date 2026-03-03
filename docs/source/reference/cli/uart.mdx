@@ -1,0 +1,217 @@
+---
+title: UART
+description: Connect to UART serial ports
+---
+
+Connect to UART serial ports on Lagerboxes for serial communication with devices.
+
+## Syntax
+
+```bash
+lager uart [NETNAME] [OPTIONS]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NETNAME` | UART net name (optional if default is set) |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--baudrate RATE` | Baudrate (e.g., 9600, 115200) |
+| `--bytesize SIZE` | Data bits (5, 6, 7, 8) |
+| `--parity MODE` | Parity: none, even, odd, mark, space |
+| `--stopbits BITS` | Stop bits (1, 1.5, 2) |
+| `--xonxoff` / `--no-xonxoff` | Software flow control |
+| `--rtscts` / `--no-rtscts` | Hardware flow control (RTS/CTS) |
+| `--dsrdtr` / `--no-dsrdtr` | Hardware flow control (DSR/DTR) |
+| `-i` / `--interactive` | Enable input mode for typing |
+| `--opost` / `--no-opost` | Convert \\n to \\r\\n on output |
+| `--line-ending MODE` | Line ending: lf, crlf, cr (default: lf) |
+
+---
+
+## Usage
+
+### Read-Only Mode (Default)
+
+```bash
+# Monitor serial output
+lager uart SERIAL1 --box my-lager-box
+
+# With specific baudrate
+lager uart SERIAL1 --baudrate 115200
+```
+
+### Interactive Mode
+
+```bash
+# Type commands and see responses
+lager uart SERIAL1 --interactive
+
+# With specific settings
+lager uart SERIAL1 -i --baudrate 9600 --parity none
+```
+
+### Get Serial Port Info
+
+```bash
+# Show device path for a UART net
+lager uart SERIAL1 serial-port
+```
+
+---
+
+## Serial Configuration
+
+### Baudrate
+
+Common baudrates:
+- 9600 (default for many devices)
+- 19200
+- 38400
+- 57600
+- 115200 (common for embedded development)
+- 230400
+- 460800
+- 921600
+
+### Data Format
+
+| Setting | Options | Default |
+|---------|---------|---------|
+| Bytesize | 5, 6, 7, 8 | 8 |
+| Parity | none, even, odd, mark, space | none |
+| Stopbits | 1, 1.5, 2 | 1 |
+
+### Flow Control
+
+| Type | Options | Description |
+|------|---------|-------------|
+| Software | `--xonxoff` | XON/XOFF characters |
+| Hardware | `--rtscts` | RTS/CTS pins |
+| Hardware | `--dsrdtr` | DSR/DTR pins |
+
+Flow control types cannot be combined.
+
+---
+
+## Line Endings
+
+| Mode | Sequence | Use Case |
+|------|----------|----------|
+| `lf` | \\n | Unix/Linux |
+| `crlf` | \\r\\n | Windows |
+| `cr` | \\r | Legacy systems |
+
+Use `--opost` to automatically convert line endings on output.
+
+---
+
+## Supported USB Serial Adapters
+
+The following USB-to-serial adapters are automatically detected and supported:
+
+| Adapter | VID:PID | Description |
+|---------|---------|-------------|
+| Prolific USB-Serial | 067b:23a3 | Common USB-Serial adapter |
+| Silicon Labs CP210x | 10c4:ea60 | Popular embedded dev boards |
+| FTDI FT232R | 0403:6001 | Single-channel USB-Serial |
+| FTDI FT4232H | 0403:6011 | Quad-channel USB-Serial |
+| ESP32 USB JTAG/Serial | 303a:1001 | Built-in ESP32-S3/C3 USB |
+
+These adapters are automatically recognized by `lager instruments` and can be configured as UART nets.
+
+---
+
+## Device Path Support
+
+UART nets can reference devices two ways:
+
+**USB Serial Number** (preferred):
+```
+Net configured with USB serial number
+Automatically resolves to correct /dev/ttyUSBx
+```
+
+**Direct Device Path** (fallback):
+```bash
+# When adapter has no serial number
+lager uart /dev/ttyUSB0 --baudrate 115200
+```
+
+---
+
+## Examples
+
+```bash
+# Basic serial monitor
+lager uart DEBUG_UART --box lab-gw
+
+# Interactive shell with common embedded settings
+lager uart CONSOLE -i --baudrate 115200
+
+# Legacy device with specific format
+lager uart LEGACY --baudrate 9600 --bytesize 7 --parity even --stopbits 2
+
+# With software flow control
+lager uart MODEM --xonxoff
+
+# Windows-style line endings
+lager uart TERMINAL --line-ending crlf --opost
+```
+
+---
+
+## WebSocket Connection
+
+The UART command uses WebSocket for communication:
+- Provides real-time bidirectional data
+- Supports both read-only and interactive modes
+- Automatically reconnects on connection loss
+
+---
+
+## Troubleshooting
+
+### Device Not Found
+
+```bash
+# List available instruments to find UART devices
+lager instruments --box my-lager-box
+
+# Check if USB serial adapter is connected
+ssh lagerdata@my-lager-box 'ls -la /dev/ttyUSB*'
+```
+
+### Permission Denied
+
+```bash
+# Ensure udev rules are installed
+lager update --box my-lager-box --yes
+```
+
+### No Output
+
+- Check baudrate matches device
+- Verify TX/RX connections
+- Try interactive mode to test input
+- Check flow control settings
+
+---
+
+## Notes
+
+- Interactive mode requires a TTY terminal
+- USB serial numbers are truncated for display
+- Default net can be set with `lager defaults add --uart-net`
+- Connection retry logic handles temporary disconnections
+
+## See Also
+
+- [Python UART API](/source/reference/python/uart) -- Access UART nets from Python scripts
+- [Python Serial API](/source/reference/python/serial) -- Native pyserial support for advanced serial use cases

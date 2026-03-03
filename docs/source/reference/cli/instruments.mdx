@@ -1,0 +1,158 @@
+---
+title: Instruments
+description: List attached instruments on a Lager Box
+---
+
+Discover and list all test instruments connected to a Lagerbox.
+
+## Syntax
+
+```bash
+lager instruments [OPTIONS]
+```
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+
+---
+
+## Usage
+
+```bash
+# List instruments on default Lager Box
+lager instruments
+
+# List instruments on specific Lager Box
+lager instruments --box lab-lager-box
+```
+
+---
+
+## Output
+
+The command displays a table of connected instruments:
+
+```
+┌─────────────────────────┬──────────┬────────────────────────────────┐
+│ Instrument              │ Channels │ Address                        │
+├─────────────────────────┼──────────┼────────────────────────────────┤
+│ Rigol_DP832             │ CH1,CH2  │ USB0::0x1AB1::0x0E11::DP8...   │
+│ Rigol_MSO5074           │ 1,2,3,4  │ USB0::0x1AB1::0x0515::MS5...   │
+│ Keithley_2281S          │ -        │ USB0::0x05E6::0x2281::912...   │
+│ LabJack_T7              │ AIN0-13  │ T7-12345678                    │
+│ MCC_USB202              │ CH0-7,DAC0-1,DIO0-7 │ USB::9999::USB202       │
+│ FTDI_USB_Serial         │ uart     │ /dev/ttyUSB0 (A12BC3...)       │
+│ Acroname_8Port          │ 1-8      │ USB-HUB-SERIAL                 │
+└─────────────────────────┴──────────┴────────────────────────────────┘
+```
+
+---
+
+## Instrument Types
+
+The following instrument types are automatically detected:
+
+### Power Supplies
+- Rigol DP800 series (DP811, DP821, DP832)
+- Keysight E36200/E36300 series
+- Keithley 2200/2280 series
+- EA PSB series
+
+### Oscilloscopes
+- Rigol MSO5000 series
+- PicoScope
+
+### Battery/Solar Simulators
+- Keithley 2281S
+- EA PSI/EL series
+
+### Electronic Loads
+- Rigol DL3000 series
+
+### Data Acquisition
+- LabJack T7 (ADC, DAC, GPIO)
+- MCC USB-202 (ADC, DAC, GPIO)
+- Phidget thermocouples
+- Yocto watt meters
+
+### USB Hubs
+- Acroname (4-port, 8-port)
+- YKUSH
+
+### Debug Probes
+- Segger J-Link
+- CMSIS-DAP
+- ST-Link
+
+### Serial Adapters
+- FTDI USB-to-serial
+
+---
+
+## Multiple Device Warning
+
+The command warns if multiple instances of multi-hub devices are detected:
+
+```
+[WARNING] Multiple LabJack_T7 devices detected.
+  Consider using net configuration to specify which device to use.
+```
+
+This applies to:
+- LabJack_T7
+- Acroname_8Port
+- Acroname_4Port
+
+---
+
+## Address Formats
+
+Different instruments use different address formats:
+
+| Type | Format | Example |
+|------|--------|---------|
+| VISA | USB resource | `USB0::0x1AB1::0x0E11::DP8...` |
+| MCC USB | USB resource | `USB::9999::USB202` |
+| LabJack | Serial number | `T7-12345678` |
+| UART | Device path | `/dev/ttyUSB0` |
+| USB Hub | Serial | `USB-HUB-SERIAL` |
+
+Long UART serial numbers are truncated to 10 characters for readability.
+
+---
+
+## Examples
+
+```bash
+# Check what instruments are connected
+lager instruments --box lab-lager-box
+
+# Use with nets command to configure
+lager instruments --box lab-lager-box
+lager nets --box lab-lager-box  # Then configure nets for discovered instruments
+```
+
+---
+
+## Troubleshooting
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| No instruments listed | USB cables disconnected, or Docker not running | Check physical USB connections. Run `lager hello --box <box>` to verify the service is running. |
+| Specific instrument missing | Instrument needs power, USB re-seat, or updated udev rules | Unplug and replug the USB cable. Ensure the instrument is powered on. Run `lager update --box <box>` for latest drivers. |
+| "Multiple devices detected" warning | More than one of the same instrument type connected | This is informational. Use net configuration to specify which device to use for each net. |
+
+## Notes
+
+- Instruments must be connected via USB to the Lager Box
+- Some instruments require specific drivers (udev rules)
+- Run `lager update` to install latest udev rules
+- Use `lager nets` to configure how instruments are used
+
+## See Also
+
+- [Nets](/source/reference/cli/nets) -- Configure logical names for your instruments
+- [Setting Up Instruments](/source/getting-started/setting-up-instruments) -- Getting started guide for instrument setup

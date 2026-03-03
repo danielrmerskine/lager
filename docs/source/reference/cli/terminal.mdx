@@ -1,0 +1,89 @@
+---
+title: Terminal
+description: Interactive REPL for running Lager commands
+---
+
+Launch an interactive terminal with tab completion, command history, and auto-suggestions for running Lager CLI commands.
+
+## Syntax
+
+```bash
+lager terminal
+```
+
+The terminal also launches automatically when you run `lager` with no subcommand.
+
+## Features
+
+| Feature | Description |
+|---------|-------------|
+| Tab completion | Auto-complete commands, subcommands, and flags |
+| Command history | Persistent history stored in `~/.lager_terminal_history` |
+| Auto-suggest | History-based suggestions as you type |
+| Arrow key navigation | Browse previous commands with up/down arrows |
+| Color-coded output | Green for success, red for errors |
+| Execution timing | Shows duration for each command |
+
+## Built-in Commands
+
+These commands are available inside the REPL in addition to all `lager` commands:
+
+| Command | Description |
+|---------|-------------|
+| `help`, `?` | Show available commands and help |
+| `clear` | Clear the screen |
+| `exit`, `quit` | Exit the terminal |
+
+## Keyboard Shortcuts
+
+| Shortcut | Action |
+|----------|--------|
+| `Tab` | Auto-complete current input |
+| `Up / Down` | Navigate command history |
+| `Ctrl+R` | Search command history |
+| `Ctrl+C` | Cancel current input |
+| `Ctrl+D` | Exit terminal |
+
+## Usage
+
+All Lager commands are available inside the terminal without the `lager` prefix:
+
+```bash
+# Launch the terminal
+lager terminal
+
+# Inside the REPL:
+> hello --box my-box
+> supply voltage 3.3 --yes
+> adc read VCC
+> status --box my-box
+> debug flash --hexfile firmware.hex
+> ?
+> exit
+```
+
+The terminal automatically prepends `lager` to each command and executes it through the CLI, so authentication, box resolution, and all standard behavior works as expected.
+
+## Blocked Commands
+
+Interactive commands that require their own terminal session are blocked inside the REPL:
+
+- Commands with `tui` subcommands (e.g., `supply tui`, `battery tui`)
+- Interactive UART sessions
+
+The terminal warns you and suggests running these from a regular shell instead.
+
+## Dependencies
+
+The terminal requires `prompt_toolkit` and `rich`. If these are not installed, the CLI falls back to showing normal help output:
+
+```bash
+pip install prompt_toolkit rich
+```
+
+## Notes
+
+- Running `lager` with no arguments launches the terminal automatically
+- Command history persists across sessions in `~/.lager_terminal_history`
+- Exit codes from each command are shown with a check mark or X indicator
+- The welcome screen adapts to your terminal width

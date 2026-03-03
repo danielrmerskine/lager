@@ -1,0 +1,4 @@
+a[data-testid="navbar-primary-button"] {
+  background-color: #ff5ca2 !important;
+  color: white !important;
+}

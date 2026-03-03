@@ -1,0 +1,44 @@
+#cloud-config
+autoinstall:
+  version: 1
+  identity:
+    hostname: NEW-BOX
+    username: lagerdata
+    password: "$6$REPLACE_WITH_YOUR_HASH"
+  ssh:
+    install-server: true
+    allow-pw: true
+  packages:
+    - git
+    - docker.io
+    - curl
+    - wget
+  storage:
+    layout:
+      name: direct
+
+  user-data:
+    disable_root: true
+    timezone: UTC
+
+    # Run everything on first boot when system is fully initialized
+    runcmd:
+      # Add user to docker group
+      - usermod -aG docker lagerdata
+
+      # Create lager directory with correct permissions
+      - mkdir -p /etc/lager
+      - chown -R 33:33 /etc/lager
+      - chmod -R 775 /etc/lager
+
+      # Install Tailscale
+      - curl -fsSL https://tailscale.com/install.sh | sh
+
+      # Join Tailscale network
+      # Get your auth key from: https://login.tailscale.com/admin/settings/keys
+      - tailscale up --authkey=tskey-auth-REPLACE_ME --accept-routes
+
+      # Save Tailscale IP for easy access
+      - sleep 5
+      - tailscale ip -4 > /home/lagerdata/tailscale-ip.txt
+      - chown lagerdata:lagerdata /home/lagerdata/tailscale-ip.txt

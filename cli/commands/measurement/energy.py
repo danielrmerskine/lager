@@ -1,0 +1,138 @@
+# Copyright 2024-2026 Lager Data LLC
+# SPDX-License-Identifier: Apache-2.0
+
+"""
+Energy analyzer commands for the Joulescope JS220.
+"""
+from __future__ import annotations
+
+import json
+
+import click
+from ...context import get_default_net, get_impl_path
+from ..development.python import run_python_internal
+from ...core.net_helpers import (
+    resolve_box,
+    display_nets,
+    validate_net_exists,
+)
+
+ENERGY_ROLE = "energy-analyzer"
+ENERGY_TIMEOUT = 120  # allow up to 2 min for long integrations
+
+
+@click.group(
+    name="energy",
+    invoke_without_command=True,
+    help="Read energy/charge from a Joulescope JS220 energy-analyzer net",
+)
+@click.pass_context
+@click.option("--box", required=False, help="Lagerbox name or IP")
+@click.option(
+    "--duration",
+    type=float,
+    default=10.0,
+    show_default=True,
+    help="Integration duration in seconds",
+)
+@click.argument("netname", required=False)
+def energy(ctx, box, duration, netname):
+    if ctx.invoked_subcommand is not None:
+        return
+
+    if netname is None:
+        netname = get_default_net(ctx, 'energy')
+
+    box_ip = resolve_box(ctx, box)
+
+    if netname is None:
+        display_nets(ctx, box_ip, None, ENERGY_ROLE, "energy analyzer")
+        return
+
+    netname = netname.strip()
+
+    net = validate_net_exists(ctx, box_ip, netname, ENERGY_ROLE)
+    if net is None:
+        return
+
+    payload = json.dumps({"netname": netname, "duration": duration, "mode": "energy"})
+
+    try:
+        run_python_internal(
+            ctx=ctx,
+            runnable=get_impl_path("energy.py"),
+            box=box_ip,
+            env=(),
+            passenv=(),
+            kill=False,
+            download=(),
+            allow_overwrite=False,
+            signum="SIGTERM",
+            timeout=ENERGY_TIMEOUT,
+            detach=False,
+            port=(),
+            org=None,
+            args=[payload],
+        )
+    except SystemExit as e:
+        if e.code != 0:
+            raise
+    except Exception as e:
+        click.secho(f"Error: Failed to read energy", fg='red', err=True)
+        click.secho(f"Details: {e}", err=True)
+        ctx.exit(1)
+
+
+@energy.command(name="stats", help="Read current/voltage/power statistics over a duration")
+@click.pass_context
+@click.option("--box", required=False, help="Lagerbox name or IP")
+@click.option(
+    "--duration",
+    type=float,
+    default=1.0,
+    show_default=True,
+    help="Measurement duration in seconds",
+)
+@click.argument("netname", required=False)
+def stats(ctx, box, duration, netname):
+    if netname is None:
+        netname = get_default_net(ctx, 'energy')
+
+    box_ip = resolve_box(ctx, box)
+
+    if netname is None:
+        display_nets(ctx, box_ip, None, ENERGY_ROLE, "energy analyzer")
+        return
+
+    netname = netname.strip()
+
+    net = validate_net_exists(ctx, box_ip, netname, ENERGY_ROLE)
+    if net is None:
+        return
+
+    payload = json.dumps({"netname": netname, "duration": duration, "mode": "stats"})
+
+    try:
+        run_python_internal(
+            ctx=ctx,
+            runnable=get_impl_path("energy.py"),
+            box=box_ip,
+            env=(),
+            passenv=(),
+            kill=False,
+            download=(),
+            allow_overwrite=False,
+            signum="SIGTERM",
+            timeout=ENERGY_TIMEOUT,
+            detach=False,
+            port=(),
+            org=None,
+            args=[payload],
+        )
+    except SystemExit as e:
+        if e.code != 0:
+            raise
+    except Exception as e:
+        click.secho(f"Error: Failed to read energy stats", fg='red', err=True)
+        click.secho(f"Details: {e}", err=True)
+        ctx.exit(1)

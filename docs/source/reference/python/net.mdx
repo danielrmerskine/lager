@@ -1,0 +1,378 @@
+---
+title: Net
+description: Core Net class for managing hardware connections
+---
+
+The `Net` class is the primary abstraction for interacting with hardware instruments. It provides a unified interface for controlling different types of hardware including power supplies, oscilloscopes, GPIO, ADC, DAC, and more.
+
+## Import
+
+```python
+from lager import Net, NetType
+
+# For exception handling
+from lager import InvalidNetError, SetupFunctionRequiredError
+```
+
+## Class Methods
+
+| Method | Description |
+|--------|-------------|
+| `Net.get()` | Create a Net instance for the specified net name and type |
+| `Net.list_saved()` | List all nets configured on the Lager Box |
+| `Net.list_all_from_env()` | List nets from environment (legacy) |
+| `Net.get_local_nets()` | Get all local net configurations |
+| `Net.save_local_nets()` | Save multiple net configurations |
+| `Net.save_local_net()` | Save a single net configuration |
+| `Net.delete_local_net()` | Delete a net configuration |
+| `Net.delete_all_local_nets()` | Delete all net configurations |
+| `Net.rename_local_net()` | Rename a net configuration |
+| `Net.filter_nets()` | Filter nets by name and/or role |
+
+## Instance Methods
+
+| Method | Description |
+|--------|-------------|
+| `enable()` | Enable the net and connect to hardware |
+| `disable()` | Disable the net and disconnect from hardware |
+
+## Method Reference
+
+### `Net.get(name, type, *, setup_function=None, teardown_function=None)`
+
+Create a Net instance for the specified net name and type.
+
+```python
+# Get a power supply net
+psu = Net.get('VDD', type=NetType.PowerSupply)
+
+# Get a GPIO net
+led = Net.get('LED', type=NetType.GPIO)
+
+# Get an analog oscilloscope net
+scope = Net.get('PROBE', type=NetType.Analog)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the net to create |
+| `type` | `NetType` | Type of net (e.g., `NetType.PowerSupply`, `NetType.GPIO`) |
+| `setup_function` | `callable` | Optional function called when net is enabled |
+| `teardown_function` | `callable` | Optional function called when net is disabled |
+
+**Returns:** Net instance appropriate for the specified type
+
+### `Net.list_saved()`
+
+List all nets configured on the Lager Box.
+
+```python
+nets = Net.list_saved()
+for net in nets:
+    print(f"{net['name']}: {net['role']}")
+```
+
+**Returns:** `list[dict]` - List of net configurations with keys:
+- `name` (str) - Net name
+- `role` (str) - Net type/role
+- `channel` (int) - Hardware channel number
+- `instrument` (str) - Associated instrument type
+
+### `Net.list_all_from_env()`
+
+List nets from the LAGER_MUXES environment variable (legacy behavior).
+
+```python
+nets = Net.list_all_from_env()
+for net in nets:
+    print(f"{net['name']}: {net['role']} on channel {net['channel']}")
+```
+
+**Returns:** `list[dict]` - List of net information
+
+### `Net.save_local_net(data)`
+
+Save a net configuration to the Lager Box.
+
+```python
+Net.save_local_net({
+    'name': 'VDD',
+    'role': 'power-supply',
+    'channel': 1,
+    'instrument': 'rigol_dp800',
+    'address': '192.168.1.100'
+})
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `dict` | Net configuration dictionary |
+
+### `Net.delete_local_net(name, role=None)`
+
+Delete a net configuration from the Lager Box.
+
+```python
+# Delete by name only
+Net.delete_local_net('VDD')
+
+# Delete by name and role
+Net.delete_local_net('VDD', role='power-supply')
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of net to delete |
+| `role` | `str` | Optional role to match |
+
+**Returns:** `bool` - True if net was deleted
+
+### `Net.rename_local_net(old_name, new_name)`
+
+Rename a net configuration.
+
+```python
+Net.rename_local_net('OLD_NAME', 'NEW_NAME')
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `old_name` | `str` | Current net name |
+| `new_name` | `str` | New net name |
+
+**Returns:** `bool` - True if net was renamed
+
+### `Net.get_local_nets()`
+
+Get all local net configurations.
+
+```python
+nets = Net.get_local_nets()
+for net in nets:
+    print(f"{net['name']}: {net['role']}")
+```
+
+**Returns:** `list[dict]` - List of net configuration dictionaries
+
+### `Net.save_local_nets(nets)`
+
+Save multiple net configurations at once.
+
+```python
+Net.save_local_nets([
+    {'name': 'VDD', 'role': 'power-supply', 'channel': 1, 'instrument': 'rigol_dp800', 'address': '192.168.1.100'},
+    {'name': 'GND', 'role': 'power-supply', 'channel': 2, 'instrument': 'rigol_dp800', 'address': '192.168.1.100'}
+])
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `nets` | `list[dict]` | List of net configuration dictionaries |
+
+### `Net.delete_all_local_nets()`
+
+Delete all net configurations from the Lager Box.
+
+```python
+Net.delete_all_local_nets()
+```
+
+**Returns:** `bool` - True if nets were deleted
+
+### `Net.filter_nets(all_nets, name, role=None)`
+
+Filter a list of nets by name and optionally by role.
+
+```python
+all_nets = Net.get_local_nets()
+
+# Find all nets named 'VDD'
+vdd_nets = Net.filter_nets(all_nets, 'VDD')
+
+# Find 'VDD' with specific role
+psu_nets = Net.filter_nets(all_nets, 'VDD', role='power-supply')
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `all_nets` | `list[dict]` | List of nets to search |
+| `name` | `str` | Net name to match |
+| `role` | `str` | Optional role to match |
+
+**Returns:** `list[dict]` - Matching nets
+
+### `enable()`
+
+Enable the net and connect to hardware.
+
+```python
+scope = Net.get('PROBE', type=NetType.Analog)
+scope.enable()  # Connect to oscilloscope
+```
+
+**Behavior by net type:**
+- **Analog**: Connects to multiplexer and enables oscilloscope channel
+- **Logic**: Enables logic analyzer channel
+- **Battery**: Enables battery simulation output
+- **PowerSupply**: Enables power supply output
+- **ELoad**: Enables electronic load
+
+### `disable(teardown=True)`
+
+Disable the net and disconnect from hardware.
+
+```python
+scope.disable()  # Disconnect and run teardown
+scope.disable(teardown=False)  # Disconnect without teardown
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `teardown` | `bool` | `True` | Whether to call teardown function |
+
+## NetType Enum
+
+Available net types:
+
+| NetType | Role String | Description |
+|---------|-------------|-------------|
+| `NetType.Analog` | `analog` | Oscilloscope analog input |
+| `NetType.Logic` | `logic` | Logic analyzer input |
+| `NetType.Waveform` | `waveform` | Waveform generator |
+| `NetType.Battery` | `battery` | Battery simulator |
+| `NetType.PowerSupply` | `power-supply` | Power supply |
+| `NetType.ELoad` | `eload` | Electronic load |
+| `NetType.GPIO` | `gpio` | Digital I/O |
+| `NetType.ADC` | `adc` | Analog-to-digital converter |
+| `NetType.DAC` | `dac` | Digital-to-analog converter |
+| `NetType.Thermocouple` | `thermocouple` | Temperature sensor |
+| `NetType.WattMeter` | `watt-meter` | Power meter |
+| `NetType.UART` | `uart` | Serial communication |
+| `NetType.Debug` | `debug` | Debug probe |
+| `NetType.Arm` | `arm` | Robotic arm |
+| `NetType.Usb` | `usb` | USB device |
+| `NetType.Rotation` | `rotation` | Rotary encoder |
+| `NetType.Wifi` | `wifi` | WiFi module |
+| `NetType.Actuate` | `actuate` | Actuator control |
+| `NetType.PowerSupply2Q` | `power-supply-2q` | Two-quadrant power supply (solar simulation) |
+
+## Properties
+
+### `name`
+
+Get the net name.
+
+```python
+print(net.name)  # 'VDD'
+```
+
+### `type`
+
+Get the net type.
+
+```python
+print(net.type)  # NetType.PowerSupply
+```
+
+## Examples
+
+### List and Use Nets
+
+```python
+from lager import Net, NetType
+
+# List all available nets
+nets = Net.list_saved()
+print("Available nets:")
+for net in nets:
+    print(f"  {net['name']}: {net['role']}")
+
+# Get and use a specific net
+psu = Net.get('VDD', type=NetType.PowerSupply)
+psu.set_voltage(3.3)
+psu.enable()
+```
+
+### Simple Nets (GPIO, ADC, DAC)
+
+```python
+from lager import Net, NetType
+
+# GPIO - no enable/disable needed
+button = Net.get('BUTTON', type=NetType.GPIO)
+state = button.input()
+
+led = Net.get('LED', type=NetType.GPIO)
+led.output(1)
+
+# ADC - no enable/disable needed
+sensor = Net.get('SENSOR', type=NetType.ADC)
+voltage = sensor.input()
+
+# DAC - no enable/disable needed
+vref = Net.get('VREF', type=NetType.DAC)
+vref.output(2.5)
+```
+
+### Complex Nets (Power, Scope)
+
+```python
+from lager import Net, NetType
+
+# Power supply - requires enable/disable
+psu = Net.get('VDD', type=NetType.PowerSupply)
+psu.set_voltage(3.3)
+psu.set_current(0.5)
+psu.enable()
+# ... use the power supply ...
+psu.disable()
+
+# Oscilloscope - requires enable/disable
+scope = Net.get('PROBE', type=NetType.Analog)
+scope.enable()
+freq = scope.measurement.frequency()
+scope.disable()
+```
+
+### Manage Net Configuration
+
+```python
+from lager import Net
+
+# Save a new net
+Net.save_local_net({
+    'name': 'NEW_PSU',
+    'role': 'power-supply',
+    'channel': 2,
+    'instrument': 'rigol_dp800',
+    'address': '192.168.1.100'
+})
+
+# Rename a net
+Net.rename_local_net('NEW_PSU', 'MAIN_POWER')
+
+# Delete a net
+Net.delete_local_net('MAIN_POWER')
+```
+
+## Notes
+
+- Simple nets (GPIO, ADC, DAC, Thermocouple) work directly without `enable()`/`disable()` calls
+- Complex nets (Analog, Logic, PowerSupply, Battery, ELoad) require `enable()` before use
+- Always call `disable()` when finished with complex nets to properly release hardware
+- Net names must match those configured on the Lager Box
+- Use `Net.list_saved()` to see all available nets

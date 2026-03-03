@@ -1,0 +1,61 @@
+---
+title: "Version 0.2.33"
+description: "December 15, 2025"
+---
+
+## <u>Features</u>
+
+### Improved Hello Command
+- `lager hello` now displays the actual Lager Box hostname instead of the Docker container ID
+- Format changed from "Hello from DUT {IP}" to "Hello from {hostname} ({IP})"
+- Mounted host's `/etc/hostname` file into container for hostname access
+
+### Documentation
+- Added Release Notes section to Mintlify documentation
+- Created release notes pages for versions v0.2.32 through v0.2.17
+- Updated RELEASE_PROCESS.md with comprehensive release notes instructions
+
+## <u>Bug Fixes</u>
+
+- Fixed eload Net API and multi-channel USB caching issues
+- Fixed cache clearing to use inline requests instead of test_utils import
+- Fixed Keithley mapper voltage handling when output is disabled
+- Fixed OVP conflicts in voltage tests by raising OVP to 10V
+- Fixed Keithley enable state issues with proper state reset
+
+## <u>Improvements</u>
+
+### Lager Update Enhancements
+- Reduced password prompts to one input per `lager update`
+- Improved third_party directory mounting to container
+- Streamlined update process with better error handling
+- Cleaned up update code and output
+
+### Testing & Caching
+- Auto-clear hardware service cache after `lager python` scripts finish
+- Added cache clearing utilities to all test files
+- Increased voltage settling time from 0.3s to 1.0s for more accurate readings
+- Removed unnecessary clear cache terminal output
+
+### Power Supply & E-Load API
+- Updated Python API for power supplies and e-loads
+- Fixed multi-channel USB resource caching
+- Improved Keithley device handling
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.2.33
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.2.33/)

@@ -1,0 +1,260 @@
+---
+title: Solar Simulation
+description: Control solar panel simulation nets
+---
+
+<Note>
+**Coming Soon:** The Solar Simulator Python API for EA PSI/EL series two-quadrant power supplies is currently under development. The Net-based API (`Net.get('solar1', type=NetType.PowerSupply2Q)`) and associated methods are documented for preview purposes, but full testing and validation are pending hardware availability. Check back in a future release for production-ready functionality.
+</Note>
+
+Simulate solar panel characteristics for testing solar-powered devices.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `enable()` | Connect and start solar simulation mode |
+| `disable()` | Disconnect and stop solar simulation |
+| `irradiance(value)` | Set or read irradiance (W/m²) |
+| `mpp_current()` | Read maximum power point current |
+| `mpp_voltage()` | Read maximum power point voltage |
+| `voc()` | Read open-circuit voltage |
+| `temperature()` | Read simulated cell temperature |
+| `resistance(value)` | Set or read panel resistance |
+
+<Note>
+Solar methods return string values from the instrument. Convert to float if needed for calculations.
+</Note>
+
+## Method Reference
+
+### `Net.get(name, type=NetType.PowerSupply2Q)`
+
+Get a solar simulation net by name.
+
+```python
+from lager import Net, NetType
+
+solar = Net.get('SOLAR', type=NetType.PowerSupply2Q)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the solar net |
+| `type` | `NetType` | Must be `NetType.PowerSupply2Q` |
+
+**Returns:** Solar simulation Net instance
+
+### `enable()`
+
+Connect to the instrument and start solar simulation mode.
+
+```python
+from lager import Net, NetType
+
+solar = Net.get('SOLAR', type=NetType.PowerSupply2Q)
+solar.enable()
+```
+
+### `disable()`
+
+Disconnect from the instrument and stop solar simulation.
+
+```python
+solar.disable()
+```
+
+### `irradiance(value=None)`
+
+Set or read the irradiance level.
+
+```python
+# Set irradiance
+solar.irradiance(1000)  # Standard test condition (1000 W/m²)
+
+# Read current irradiance
+irr = solar.irradiance()
+print(f"Irradiance: {irr}")  # Returns string
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `float` or `None` | Irradiance in W/m² (0-1500). If None, reads current value. |
+
+**Returns:** `str` - Current irradiance value
+
+### `voc()`
+
+Read the open-circuit voltage.
+
+```python
+voc_str = solar.voc()
+print(f"Voc: {voc_str}")
+voc = float(voc_str)  # Convert to float for calculations
+```
+
+**Returns:** `str` - Voltage value
+
+### `mpp_voltage()`
+
+Read the maximum power point voltage.
+
+```python
+v_mpp = solar.mpp_voltage()
+print(f"MPP voltage: {v_mpp}")
+```
+
+**Returns:** `str` - Voltage value
+
+### `mpp_current()`
+
+Read the maximum power point current.
+
+```python
+i_mpp = solar.mpp_current()
+print(f"MPP current: {i_mpp}")
+```
+
+**Returns:** `str` - Current value
+
+### `resistance(value=None)`
+
+Set or read the dynamic panel resistance.
+
+```python
+# Set resistance
+solar.resistance(5.0)
+
+# Read resistance
+r = solar.resistance()
+print(f"Resistance: {r}")
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `float` or `None` | Resistance in ohms. If None, reads current value. |
+
+**Returns:** `str` - Resistance value
+
+### `temperature()`
+
+Read the simulated cell temperature.
+
+```python
+temp = solar.temperature()
+print(f"Cell temp: {temp}")
+```
+
+**Returns:** `str` - Temperature value
+
+## Examples
+
+### Basic Solar Simulation
+
+```python
+from lager import Net, NetType
+import time
+
+solar = Net.get('SOLAR_INPUT', type=NetType.PowerSupply2Q)
+
+# Start simulation
+solar.enable()
+
+# Set standard test conditions (1000 W/m²)
+solar.irradiance(1000)
+time.sleep(1)
+
+# Read panel characteristics (returns strings)
+voc = solar.voc()
+v_mpp = solar.mpp_voltage()
+i_mpp = solar.mpp_current()
+
+print(f"Voc: {voc}")
+print(f"MPP: {v_mpp}V @ {i_mpp}A")
+
+# Calculate max power (convert to float first)
+v = float(v_mpp)
+i = float(i_mpp)
+print(f"Max Power: {v * i:.2f}W")
+
+# Clean up
+solar.disable()
+```
+
+### Test Multiple Irradiance Levels
+
+```python
+from lager import Net, NetType
+import time
+
+solar = Net.get('SOLAR', type=NetType.PowerSupply2Q)
+solar.enable()
+
+conditions = [200, 500, 800, 1000, 1200]
+
+for irr in conditions:
+    solar.irradiance(irr)
+    time.sleep(1)
+
+    # Read and convert values
+    voc = float(solar.voc())
+    v_mpp = float(solar.mpp_voltage())
+    i_mpp = float(solar.mpp_current())
+
+    print(f"Irradiance: {irr} W/m²")
+    print(f"  Voc: {voc:.2f}V")
+    print(f"  MPP: {v_mpp:.2f}V @ {i_mpp:.3f}A")
+    print(f"  Power: {v_mpp * i_mpp:.2f}W")
+    print()
+
+solar.disable()
+```
+
+### MPPT Tracking Test
+
+```python
+from lager import Net, NetType
+import time
+
+solar = Net.get('SOLAR', type=NetType.PowerSupply2Q)
+dut_current = Net.get('DUT_CURRENT', type=NetType.ADC)
+
+solar.enable()
+solar.irradiance(1000)
+
+# Monitor MPPT tracking
+for i in range(30):
+    i_mpp = float(solar.mpp_current())
+    actual = dut_current.input()
+
+    efficiency = (actual / i_mpp) * 100 if i_mpp > 0 else 0
+    print(f"Target: {i_mpp:.3f}A, Actual: {actual:.3f}A, Eff: {efficiency:.1f}%")
+    time.sleep(1)
+
+solar.disable()
+```
+
+## Supported Hardware
+
+| Manufacturer | Model | Features |
+|--------------|-------|----------|
+| EA | PSI/EL series | Two-quadrant, PV simulation |
+| EA | PSB 10060-60 | Bidirectional |
+| EA | PSB 10080-60 | Bidirectional |
+
+## Notes
+
+- Solar simulation requires bidirectional (two-quadrant) power supplies
+- Standard Test Conditions (STC): 1000 W/m², 25°C, AM1.5
+- The I-V curve is automatically generated based on irradiance
+- Call `enable()` before using solar-specific methods
+- Always call `disable()` when finished
+- **Return values are strings** - convert to float for calculations

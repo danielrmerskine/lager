@@ -1,0 +1,284 @@
+---
+title: Robot Arm
+description: Control robot arm position and movement
+---
+
+Control robot arm operations for your device - motion commands, motor control, and position utilities. All positions are in millimeters (mm).
+
+## Syntax
+
+```bash
+lager arm [OPTIONS] [NETNAME] COMMAND [ARGS]...
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP |
+| `--help` | Show help message and exit |
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NETNAME` | Arm net name (optional if default is set) |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `position` | Get current arm position |
+| `move` | Move to an absolute XYZ position |
+| `move-by` | Move by relative dX dY dZ offsets |
+| `go-home` | Move the arm to its home position (X0 Y300 Z0) |
+| `enable-motor` | Enable arm motors |
+| `disable-motor` | Disable arm motors |
+| `read-and-save-position` | Save current position as calibration reference |
+| `set-acceleration` | Set arm acceleration parameters |
+
+---
+
+## Command Reference
+
+### `position`
+
+Get the current arm position in millimeters.
+
+```bash
+lager arm [NETNAME] position [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+```bash
+lager arm ARM1 position --box my-lager-box
+```
+
+---
+
+### `move`
+
+Move the arm to an absolute XYZ position in millimeters.
+
+```bash
+lager arm [NETNAME] move X Y Z [OPTIONS]
+```
+
+**Arguments:**
+- `X` - Target X position (mm)
+- `Y` - Target Y position (mm)
+- `Z` - Target Z position (mm)
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--timeout FLOAT` - Move timeout in seconds (default: 5.0)
+- `--yes` - Confirm the action without prompting
+
+**Examples:**
+```bash
+# Move to specific coordinates
+lager arm ARM1 move 100 200 50 --box my-lager-box --yes
+
+# Move with custom timeout
+lager arm ARM1 move 150 250 75 --timeout 10.0 --yes
+```
+
+---
+
+### `move-by`
+
+Move the arm by relative offsets (delta movement) in millimeters.
+
+```bash
+lager arm [NETNAME] move-by [DX] [DY] [DZ] [OPTIONS]
+```
+
+**Arguments:**
+- `DX` - Delta X offset (default: 0.0)
+- `DY` - Delta Y offset (default: 0.0)
+- `DZ` - Delta Z offset (default: 0.0)
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--timeout FLOAT` - Move timeout in seconds (default: 5.0)
+- `--yes` - Confirm the action without prompting
+
+**Examples:**
+```bash
+# Jog the arm by +5 mm in every axis
+lager arm ARM1 move-by 5 5 5 --box my-lager-box --yes
+
+# Move only in Z axis
+lager arm ARM1 move-by 0 0 10 --yes
+
+# Move with custom timeout
+lager arm ARM1 move-by 10 0 0 --timeout 3.0 --yes
+```
+
+---
+
+### `go-home`
+
+Move the arm to its home position (X0 Y300 Z0).
+
+```bash
+lager arm [NETNAME] go-home [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--yes` - Confirm the action without prompting
+
+**Example:**
+```bash
+lager arm ARM1 go-home --box my-lager-box --yes
+```
+
+---
+
+### `enable-motor`
+
+Enable the arm's motor drivers.
+
+```bash
+lager arm [NETNAME] enable-motor [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+```bash
+lager arm ARM1 enable-motor --box my-lager-box
+```
+
+---
+
+### `disable-motor`
+
+Disable the arm's motor drivers. Use this before manual manipulation of the arm.
+
+```bash
+lager arm [NETNAME] disable-motor [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+```bash
+lager arm ARM1 disable-motor --box my-lager-box
+```
+
+---
+
+### `read-and-save-position`
+
+Read the current position and save it as a calibration reference.
+
+```bash
+lager arm [NETNAME] read-and-save-position [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+```bash
+lager arm ARM1 read-and-save-position --box my-lager-box
+```
+
+---
+
+### `set-acceleration`
+
+Set arm acceleration parameters for movement control.
+
+```bash
+lager arm [NETNAME] set-acceleration ACCELERATION TRAVEL [RETRACT] [OPTIONS]
+```
+
+**Arguments:**
+- `ACCELERATION` - Acceleration value (integer, >= 0)
+- `TRAVEL` - Travel acceleration value (integer, >= 0)
+- `RETRACT` - Retract acceleration value (integer, >= 0, default: 60)
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+```bash
+# Set acceleration parameters
+lager arm ARM1 set-acceleration 100 80 60 --box my-lager-box
+```
+
+---
+
+## Listing Arm Nets
+
+When invoked with only `--box` and no subcommand, lists all arm nets on the box:
+
+```bash
+lager arm --box my-lager-box
+```
+
+**Output:**
+```
+Name    Net Type  Instrument     Channel  Address
+ARM1    arm       Rotrics_Dexarm 0        /dev/ttyUSB0
+```
+
+---
+
+## Examples
+
+```bash
+# List arm nets
+lager arm --box my-lager-box
+
+# Get current position
+lager arm ARM1 position --box my-lager-box
+
+# Move to home position
+lager arm ARM1 go-home --box my-lager-box --yes
+
+# Move to specific coordinates
+lager arm ARM1 move 100 250 30 --box my-lager-box --yes
+
+# Jog the arm by +5 mm in X direction
+lager arm ARM1 move-by 5 0 0 --box my-lager-box --yes
+
+# Disable motors for manual adjustment
+lager arm ARM1 disable-motor --box my-lager-box
+
+# Re-enable motors after adjustment
+lager arm ARM1 enable-motor --box my-lager-box
+
+# Save current position as reference
+lager arm ARM1 read-and-save-position --box my-lager-box
+
+# Configure acceleration
+lager arm ARM1 set-acceleration 100 80 60 --box my-lager-box
+```
+
+---
+
+## Supported Hardware
+
+| Manufacturer | Model | Description |
+|--------------|-------|-------------|
+| Rotrics | Dexarm | Desktop robot arm with 3-axis control |
+
+---
+
+## Notes
+
+- All positions are in millimeters (mm)
+- Home position is X0 Y300 Z0
+- Use `--yes` flag for non-interactive scripts and CI pipelines
+- Always re-enable motors after disabling them to resume normal operation
+- The `--timeout` option prevents commands from hanging if the arm fails to reach position
+- Default net can be set with `lager defaults add --arm-net`

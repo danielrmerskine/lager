@@ -1,0 +1,45 @@
+---
+title: "Version 0.3.26"
+description: "February 19, 2026"
+---
+
+## <u>Features</u>
+
+### MCP Server for AI Assistant Integration
+
+Full Model Context Protocol (MCP) server enabling AI assistants to control Lager hardware directly:
+
+- **165+ tools** across 21 modules covering all Lager CLI functionality: power supplies, batteries, solar simulation, electronic loads, I2C, SPI, UART, BLE, WiFi, USB, ADC, DAC, GPIO, oscilloscope, debug, robotic arm, webcam, and more
+- Run with `python -m cli.mcp` or `mcp dev cli/mcp/server.py`
+- Built on FastMCP with subprocess-based CLI wrapping for reliable operation
+- Power supply and battery tools auto-pass `--yes` to skip confirmation prompts for safe automated operation
+
+### MCP Test Suite
+
+Comprehensive test coverage for the MCP server:
+
+- **254 unit tests** with mocked subprocess calls (no hardware required, runs in ~0.6s)
+- **64 integration tests** against real Lager Boxes covering power, battery, eload, I2C, SPI, ADC, DAC, GPIO, USB, and defaults
+- Safety fixtures auto-disable power output in test teardown
+
+## <u>Improvements</u>
+
+- Cleaned up LabJack T7 SPI driver code
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.26
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.26/)

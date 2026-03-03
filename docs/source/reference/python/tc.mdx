@@ -1,0 +1,144 @@
+---
+title: Thermocouple
+description: Read temperature from thermocouple sensors
+---
+
+Read temperature measurements from thermocouple sensors.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `read()` | Read temperature in °C |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.Thermocouple)`
+
+Get a thermocouple net by name.
+
+```python
+from lager import Net, NetType
+
+tc = Net.get('TEMP_SENSOR', type=NetType.Thermocouple)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the thermocouple net |
+| `type` | `NetType` | Must be `NetType.Thermocouple` |
+
+**Returns:** Thermocouple Net instance
+
+### `read()`
+
+Read the temperature from the thermocouple.
+
+```python
+temp = tc.read()
+print(f"Temperature: {temp}°C")
+```
+
+**Returns:** `float` - Temperature in degrees Celsius
+
+## Examples
+
+### Single Reading
+
+```python
+from lager import Net, NetType
+
+probe = Net.get('OVEN_PROBE', type=NetType.Thermocouple)
+temp = probe.read()
+print(f"Temperature: {temp:.1f}°C")
+```
+
+### Continuous Monitoring
+
+```python
+from lager import Net, NetType
+import time
+
+tc = Net.get('FURNACE_TC', type=NetType.Thermocouple)
+
+print("Monitoring temperature. Press Ctrl+C to exit.")
+
+while True:
+    try:
+        temp = tc.read()
+        print(f"Temperature: {temp:.2f}°C")
+        time.sleep(1)
+    except KeyboardInterrupt:
+        print("Monitoring stopped.")
+        break
+```
+
+### Temperature Logging
+
+```python
+from lager import Net, NetType
+import time
+import csv
+
+tc = Net.get('DUT_TEMP', type=NetType.Thermocouple)
+
+with open('temp_log.csv', 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(['time', 'temperature'])
+
+    start = time.time()
+    for i in range(100):
+        elapsed = time.time() - start
+        temp = tc.read()
+        writer.writerow([elapsed, temp])
+        time.sleep(1)
+
+print("Logging complete")
+```
+
+### Thermal Protection
+
+```python
+from lager import Net, NetType
+import time
+
+tc = Net.get('BOARD_TEMP', type=NetType.Thermocouple)
+psu = Net.get('VDD', type=NetType.PowerSupply)
+
+MAX_TEMP = 85.0  # °C
+
+psu.set_voltage(3.3)
+psu.enable()
+
+while True:
+    temp = tc.read()
+    print(f"Board temp: {temp:.1f}°C")
+
+    if temp > MAX_TEMP:
+        print("OVER TEMPERATURE! Shutting down.")
+        psu.disable()
+        break
+
+    time.sleep(1)
+```
+
+## Hardware Integration
+
+| Hardware | Features |
+|----------|----------|
+| Phidget | K-type thermocouple interface |
+
+## Notes
+
+- Thermocouple nets work directly without `enable()`/`disable()` calls
+- Temperature is returned in degrees Celsius
+- Reading rate depends on thermocouple hardware
+- Net names must match those configured on the Lager Box

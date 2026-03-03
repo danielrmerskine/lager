@@ -1,0 +1,32 @@
+---
+title: "Version 0.3.22"
+description: "February 16, 2026"
+---
+
+## <u>Improvements</u>
+
+### Remove LabJack Pin Conflict Restrictions
+
+- Removed SPI/GPIO and I2C/GPIO pin conflict restrictions from `lager nets add`, `lager nets add-all`, and the interactive TUI
+- Users can now freely create SPI, I2C, and GPIO nets on the same LabJack T7 FIO pins without warnings, prompts, or blocking validation
+- The LabJack T7 configures pins dynamically at transaction time, so multiple net types on the same physical pins work correctly (e.g., SPI on FIO0-FIO3 alongside GPIO on FIO0)
+- `lager nets add-all` no longer prompts "Choose [spi, gpio]" or "Choose [i2c, gpio]" and creates all net types automatically
+- The TUI Add Nets screen no longer shows yellow pin conflict warnings
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.22
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.22/)

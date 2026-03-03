@@ -1,0 +1,39 @@
+---
+title: "Version 0.3.12"
+description: "January 15, 2026"
+---
+
+## <u>Bug Fixes</u>
+
+### Keysight E36233A Power Supply TUI Support
+- Fixed Supply TUI monitoring for Keysight E36233A power supplies on Lager Boxes
+- Resolved "cannot import name '_resolve_net_and_driver'" error that prevented TUI from starting
+- Fixed SCPI measurement commands to use correct syntax for voltage and current readings
+- Fixed channel validation to properly accept channel numbers
+- Fixed OCP and OVP protection setting commands in TUI
+- Fixed negative zero display issue (no longer shows "-0.000")
+
+## <u>Improvements</u>
+
+### Power Supply Driver Enhancements
+- Added retry logic for device identification queries to improve connection reliability
+- Improved cache management to prevent stale USB/VISA connections
+- Updated hardware maximum specifications display for E36233A (30V/20A per channel)
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.12
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.12/)

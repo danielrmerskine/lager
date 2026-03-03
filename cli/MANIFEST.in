@@ -1,0 +1,8 @@
+include README.md
+include LICENSE
+recursive-include cli/impl *.py
+recursive-include cli *.py
+recursive-include cli/deployment *.sh
+global-exclude __pycache__
+global-exclude *.py[co]
+global-exclude .DS_Store

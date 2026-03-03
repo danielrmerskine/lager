@@ -1,0 +1,245 @@
+---
+title: Python SDK Overview
+description: Introduction to the Lager Python SDK for test automation and hardware control
+---
+
+The Lager Python SDK provides a powerful, object-oriented interface for controlling hardware and automating tests on your Device Under Test (DUT). It enables programmatic control of power supplies, sensors, debug probes, and more.
+
+## Import
+
+```python
+from lager import Net, NetType  # Convenience import for Net and NetType
+```
+
+## Core Classes
+
+| Class | Description | Import |
+|-------|-------------|--------|
+| [`binaries`](./binaries) | Execute custom binaries | `from lager.binaries import run_custom_binary` |
+| [`Net`](./net) | Core class for managing hardware connections | `from lager import Net, NetType` |
+| [`Central`](./ble) | BLE scanning and connection | `from lager.ble import Central, Client` |
+
+## Net Types
+
+The SDK supports various net types for different hardware:
+
+| NetType | Description | Hardware |
+|---------|-------------|----------|
+| `NetType.PowerSupply` | Programmable power supply | Rigol DP800, Keithley, Keysight |
+| `NetType.PowerSupply2Q` | Two-quadrant supply (solar sim) | EA PSI/EL series |
+| `NetType.Battery` | Battery simulator | Keithley 2281S |
+| `NetType.ELoad` | Electronic load | Rigol DL3000 |
+| `NetType.Analog` | Oscilloscope analog input | Rigol MSO5000 |
+| `NetType.Logic` | Logic analyzer input | Rigol MSO5000 |
+| `NetType.Waveform` | Waveform generator | Rigol MSO5000 |
+| `NetType.GPIO` | Digital I/O | LabJack T7, MCC USB-202 |
+| `NetType.ADC` | Analog-to-digital converter | LabJack T7, MCC USB-202 |
+| `NetType.DAC` | Digital-to-analog converter | LabJack T7, MCC USB-202 |
+| `NetType.Thermocouple` | Temperature sensor | Phidget |
+| `NetType.Rotation` | Rotary encoder | Phidget |
+| `NetType.WattMeter` | Power meter | Yocto-Watt, Joulescope JS220 |
+| `NetType.UART` | Serial communication | USB Serial |
+| `NetType.Debug` | Debug probe | J-Link, pyOCD |
+| `NetType.Arm` | Robotic arm | Rotrics Dexarm |
+| `NetType.Usb` | USB port control | Acroname, YKUSH |
+| `NetType.Wifi` | WiFi module | Lager Box WiFi |
+| `NetType.Actuate` | Actuator control | Dexarm actuator |
+| `NetType.SPI` | SPI bus communication | Aardvark, FT232H, LabJack T7 |
+| `NetType.I2C` | I2C bus communication | Aardvark, FT232H, LabJack T7 |
+| `NetType.Webcam` | Video streaming | USB Webcam |
+
+## Quick Start
+
+### List Available Nets
+
+```python
+from lager import Net
+
+nets = Net.list_saved()
+for net in nets:
+    print(f"{net['name']}: {net['role']}")
+```
+
+### Control a Power Supply
+
+```python
+from lager import Net, NetType
+
+# Get the power supply net
+psu = Net.get('VDD', type=NetType.PowerSupply)
+
+# Configure and enable
+psu.set_voltage(3.3)
+psu.set_current(0.5)
+psu.enable()
+
+# Read measurements
+print(f"Voltage: {psu.voltage()}V")
+print(f"Current: {psu.current()}A")
+
+# Disable when done
+psu.disable()
+```
+
+### Read an ADC
+
+```python
+from lager import Net, NetType
+
+adc = Net.get('SENSOR', type=NetType.ADC)
+voltage = adc.input()
+print(f"Voltage: {voltage}V")
+```
+
+### Control GPIO
+
+```python
+from lager import Net, NetType
+
+# Read input
+button = Net.get('BUTTON', type=NetType.GPIO)
+state = button.input()
+
+# Set output
+led = Net.get('LED', type=NetType.GPIO)
+led.output(1)  # HIGH
+led.output(0)  # LOW
+```
+
+### Control Debug Probe
+
+```python
+from lager import Net, NetType
+
+# Get the debug net
+debug = Net.get('jlink1', type=NetType.Debug)
+
+# Connect and flash firmware
+debug.connect()
+debug.flash(['firmware.hex'])
+debug.reset()
+```
+
+### Control USB Hub
+
+```python
+from lager import Net, NetType
+
+# Get the USB net
+usb = Net.get('SENSOR_USB', type=NetType.Usb)
+
+# Power control
+usb.enable()      # Power on
+usb.disable()     # Power off
+usb.toggle()      # Toggle state
+```
+
+## Complete Example
+
+```python
+from lager import Net, NetType
+import time
+
+# 1. Flash firmware
+debug = Net.get('jlink1', type=NetType.Debug)
+debug.connect()
+debug.flash(['firmware.hex'])
+debug.reset()
+print("Firmware flashed")
+
+# 2. Power on USB peripheral
+usb = Net.get('SENSOR_USB', type=NetType.Usb)
+usb.enable()
+print("USB sensor powered on")
+
+# 3. Enable main power
+main_power = Net.get("VDD_MAIN", type=NetType.PowerSupply)
+main_power.set_voltage(3.3)
+main_power.enable()
+print("Main power enabled")
+
+# 4. Read sensor
+sensor = Net.get("TEMP_SENSE", type=NetType.ADC)
+temperature = sensor.input()
+print(f"Temperature: {temperature}V")
+
+# 5. Clean up
+main_power.disable()
+usb.disable()
+print("Test complete")
+```
+
+## API Reference
+
+### Core Classes
+
+| Page | Description |
+|------|-------------|
+| [Custom Binaries](./binaries) | Execute custom binaries on the Lager Box |
+| [Net](./net) | Hardware net management and core operations |
+| [Debug](./debug) | Device flashing, reset, and debug control (includes RTT) |
+| [USB](./usb) | USB device power control |
+
+### Power & Simulation
+
+| Page | Description |
+|------|-------------|
+| [Power Supply](./supply) | Programmable power supply control |
+| [Battery](./battery) | Battery simulation and testing |
+| [Solar](./solar) | Solar panel simulation |
+| [Electronic Load](./eload) | Electronic load control |
+| [Watt Meter](./watt) | Power measurement |
+
+### Measurement
+
+| Page | Description |
+|------|-------------|
+| [Scope](./scope) | Oscilloscope waveform capture and measurements |
+| [Logic Analyzer](./logic) | Digital signal capture and protocol decode |
+| [ADC](./adc) | Analog-to-digital conversion |
+| [Thermocouple](./tc) | Temperature measurement |
+
+### I/O & Communication
+
+| Page | Description |
+|------|-------------|
+| [GPIO](./gpio) | Digital input/output control |
+| [DAC](./dac) | Digital-to-analog conversion |
+| [I2C](./i2c) | I2C bus communication |
+| [SPI](./spi) | SPI bus communication |
+| [UART](./uart) | UART net serial communication |
+| [Serial](./serial) | Native pyserial support |
+| [BLE](./ble) | Bluetooth Low Energy communication |
+| [WiFi](./wifi) | WiFi configuration |
+
+### Utilities
+
+| Page | Description |
+|------|-------------|
+| [Robot Arm](./arm) | Robotic arm control |
+| [Webcam](./webcam) | Webcam streaming and video capture |
+
+## Error Handling
+
+```python
+from lager import Net, NetType, InvalidNetError
+
+try:
+    net = Net.get('INVALID_NET', NetType.Analog)
+except InvalidNetError as e:
+    print(f"Net not found: {e}")
+except Exception as e:
+    print(f"Error: {e}")
+```
+
+## Notes
+
+- Always call `disable()` when finished with power-related nets
+- Simple nets (GPIO, ADC, DAC) don't require `enable()`/`disable()` calls
+- Complex nets (PowerSupply, Battery, Analog) require `enable()` before use
+- Net names must match those configured in the Lager system
+- Use try/except blocks for robust error handling
+
+## Demo Script
+
+For a more comprehensive example combining robot arm control, USB hub power cycling, debug probe flashing, power supply management, and ADC measurement in a single automated workflow, see the [demo script](https://github.com/lagerdata/lager/blob/main/docs/examples/demo_script.py).

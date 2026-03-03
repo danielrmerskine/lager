@@ -1,0 +1,954 @@
+---
+title: Oscilloscope
+description: Control oscilloscope settings and capture waveforms
+---
+
+Control oscilloscope nets through the Lager CLI for waveform capture, triggering, measurements, and streaming.
+
+## Syntax
+
+```bash
+lager scope [NETNAME] [OPTIONS] COMMAND [ARGS]...
+```
+
+If `NETNAME` is omitted, lists all available scope nets on the box.
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--mcu MCU` | MCU identifier (passed to the backend; use when multiple MCUs share a scope) |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description | Hardware |
+|---------|-------------|----------|
+| `enable` | Enable oscilloscope channel | Both |
+| `disable` | Disable oscilloscope channel | Both |
+| `start` | Start waveform capture (continuous or single) | Both |
+| `stop` | Stop waveform capture | Both |
+| `force` | Force trigger manually (bypass trigger condition) | Both |
+| `autoscale` | Automatically adjust vertical scale and timebase | Rigol only |
+| `coupling` | Set channel coupling mode (dc, ac, or gnd) | Rigol only |
+| `probe` | Set probe attenuation ratio | Rigol only |
+| `scale` | Set vertical scale (volts per division) | Rigol only |
+| `timebase` | Set horizontal timebase (seconds per division) | Rigol only |
+| `measure` | Measure waveform characteristics | Rigol only |
+| `trigger` | Configure trigger settings | Both (see note) |
+| `cursor` | Control scope cursor positions | Rigol only |
+| `stream` | Stream oscilloscope data with web visualization | PicoScope only |
+
+<Note>
+Edge trigger works with both PicoScope and Rigol. Protocol triggers (I2C, SPI, UART) and pulse width trigger are Rigol only.
+</Note>
+
+---
+
+## Validation Ranges
+
+The CLI validates input values before sending commands to the oscilloscope:
+
+| Parameter | Minimum | Maximum | Unit |
+|-----------|---------|---------|------|
+| Vertical scale | 0.001 | 100.0 | V/div |
+| Horizontal timebase | 1e-9 (1 ns) | 50.0 | s/div |
+| Capture duration | 0.001 (1 ms) | 3600 (1 hr) | seconds |
+| Sample count | 1 | 100,000,000 | samples |
+
+---
+
+## Supported Hardware
+
+| Manufacturer | Model | Features |
+|--------------|-------|----------|
+| Rigol | MSO5000 series | 4 analog + 16 digital channels, SCPI/VISA control, advanced triggers (edge, pulse, I2C, SPI, UART), measurements, cursors |
+| PicoScope | 2000 series | Real-time streaming, web-based visualization, CSV export, edge trigger |
+
+### Feature Comparison
+
+| Feature | Rigol MSO5000 | PicoScope 2000 |
+|---------|---------------|----------------|
+| Channels | 4 analog + 16 digital | Up to 4 analog |
+| Real-time streaming | No (single capture) | Yes (continuous) |
+| Measurements | 11 built-in types | Via streaming/CSV |
+| Trigger types | Edge, pulse, I2C, SPI, UART | Edge only |
+| Cursor control | Manual XY cursors | Web UI cursors |
+| Autoscale | Yes | No |
+| Web visualization | No | Yes (HTML5) |
+| Data export | Via measurements | CSV streaming |
+| Control method | SCPI over USB/LAN | WebSocket daemon |
+
+---
+
+## Basic Control Commands
+
+### `enable`
+
+Enable oscilloscope channel for the specified net.
+
+```bash
+lager scope NET_NAME enable [--box BOX] [--mcu MCU]
+```
+
+### `disable`
+
+Disable oscilloscope channel.
+
+```bash
+lager scope NET_NAME disable [--box BOX] [--mcu MCU]
+```
+
+### `start`
+
+Start waveform capture (continuous or single).
+
+```bash
+lager scope NET_NAME start [--box BOX] [--mcu MCU] [--single]
+```
+
+**Options:**
+- `--single` - Capture single waveform then stop (one-shot mode)
+
+### `stop`
+
+Stop waveform capture.
+
+```bash
+lager scope NET_NAME stop [--box BOX] [--mcu MCU]
+```
+
+### `force`
+
+Force trigger manually, bypassing the trigger condition. Useful when the signal doesn't meet trigger criteria.
+
+```bash
+lager scope NET_NAME force [--box BOX] [--mcu MCU]
+```
+
+### `autoscale`
+
+Automatically adjust vertical scale and horizontal timebase for optimal display (Rigol only).
+
+```bash
+lager scope NET_NAME autoscale [--box BOX] [--mcu MCU]
+```
+
+---
+
+## Channel Configuration (Rigol)
+
+### `coupling`
+
+Set the input coupling mode for the oscilloscope channel.
+
+```bash
+lager scope NET_NAME coupling MODE [--box BOX] [--mcu MCU]
+```
+
+**Arguments:**
+- `MODE` - Coupling mode: `dc`, `ac`, or `gnd`
+
+| Mode | Description |
+|------|-------------|
+| `dc` | Pass both DC and AC components |
+| `ac` | Block DC component, pass AC only |
+| `gnd` | Ground reference (0V baseline) |
+
+### `probe`
+
+Set the probe attenuation ratio for accurate voltage measurements.
+
+```bash
+lager scope NET_NAME probe RATIO [--box BOX] [--mcu MCU]
+```
+
+**Arguments:**
+- `RATIO` - Probe attenuation: `1`, `10`, `100`, or `1000`
+
+```bash
+lager scope ANALOG1 probe 10 --box my-box    # 10:1 probe
+lager scope ANALOG1 probe 1 --box my-box     # Direct connection (1:1)
+lager scope ANALOG1 probe 100 --box my-box   # 100:1 high-voltage probe
+```
+
+### `scale`
+
+Set the vertical scale (volts per division) for the oscilloscope channel.
+
+```bash
+lager scope NET_NAME scale VOLTS_PER_DIV [--box BOX] [--mcu MCU]
+```
+
+**Arguments:**
+- `VOLTS_PER_DIV` - Vertical scale in volts per division (0.001 to 100.0)
+
+```bash
+lager scope ANALOG1 scale 1.0 --box my-box    # 1V/div
+lager scope ANALOG1 scale 0.5 --box my-box    # 500mV/div
+lager scope ANALOG1 scale 0.1 --box my-box    # 100mV/div
+lager scope ANALOG1 scale 0.001 --box my-box  # 1mV/div (minimum)
+```
+
+### `timebase`
+
+Set the horizontal timebase (seconds per division) for the oscilloscope.
+
+```bash
+lager scope NET_NAME timebase SEC_PER_DIV [--box BOX] [--mcu MCU]
+```
+
+**Arguments:**
+- `SEC_PER_DIV` - Horizontal timebase in seconds per division (1e-9 to 50.0)
+
+```bash
+lager scope ANALOG1 timebase 0.001 --box my-box      # 1ms/div
+lager scope ANALOG1 timebase 0.0001 --box my-box     # 100us/div
+lager scope ANALOG1 timebase 0.000001 --box my-box   # 1us/div
+lager scope ANALOG1 timebase 0.000000001 --box my-box # 1ns/div (minimum)
+```
+
+---
+
+## Measure Subcommands (Rigol)
+
+Measure waveform characteristics on Rigol oscilloscopes. PicoScope users should use the streaming capture commands to export waveform data for analysis.
+
+**Common Options for all measure commands:**
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP |
+| `--mcu MCU` | MCU identifier |
+| `--display` | Display measurement on oscilloscope screen |
+| `--cursor` | Enable measurement cursor on screen |
+
+### Time Measurements
+
+#### `measure period`
+
+Measure waveform period.
+
+```bash
+lager scope NET_NAME measure period [--box BOX] [--display] [--cursor]
+```
+
+#### `measure freq`
+
+Measure waveform frequency.
+
+```bash
+lager scope NET_NAME measure freq [--box BOX] [--display] [--cursor]
+```
+
+#### `measure pulse-width-pos`
+
+Measure positive pulse width.
+
+```bash
+lager scope NET_NAME measure pulse-width-pos [--box BOX] [--display] [--cursor]
+```
+
+#### `measure pulse-width-neg`
+
+Measure negative pulse width.
+
+```bash
+lager scope NET_NAME measure pulse-width-neg [--box BOX] [--display] [--cursor]
+```
+
+#### `measure duty-cycle-pos`
+
+Measure positive duty cycle (percentage of time signal is high).
+
+```bash
+lager scope NET_NAME measure duty-cycle-pos [--box BOX] [--display] [--cursor]
+```
+
+#### `measure duty-cycle-neg`
+
+Measure negative duty cycle (percentage of time signal is low).
+
+```bash
+lager scope NET_NAME measure duty-cycle-neg [--box BOX] [--display] [--cursor]
+```
+
+### Voltage Measurements
+
+#### `measure vpp`
+
+Measure peak-to-peak voltage.
+
+```bash
+lager scope NET_NAME measure vpp [--box BOX] [--display] [--cursor]
+```
+
+#### `measure vmax`
+
+Measure maximum voltage.
+
+```bash
+lager scope NET_NAME measure vmax [--box BOX] [--display] [--cursor]
+```
+
+#### `measure vmin`
+
+Measure minimum voltage.
+
+```bash
+lager scope NET_NAME measure vmin [--box BOX] [--display] [--cursor]
+```
+
+#### `measure vavg`
+
+Measure average voltage.
+
+```bash
+lager scope NET_NAME measure vavg [--box BOX] [--display] [--cursor]
+```
+
+#### `measure vrms`
+
+Measure RMS (root mean square) voltage.
+
+```bash
+lager scope NET_NAME measure vrms [--box BOX] [--display] [--cursor]
+```
+
+---
+
+## Trigger Subcommands
+
+Configure trigger settings. Edge trigger works with both PicoScope and Rigol. Protocol triggers (I2C, SPI, UART) and pulse trigger are Rigol only.
+
+**Common Trigger Options:**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--mode` | Trigger mode: `normal`, `auto`, `single` | `normal` |
+| `--coupling` | Coupling mode: `dc`, `ac`, `low_freq_rej`, `high_freq_rej` | `dc` |
+| `--source NET` | Trigger source net | Current net |
+| `--level VOLTS` | Trigger level in volts | - |
+
+### `trigger edge`
+
+Set edge trigger configuration. Works with both PicoScope and Rigol.
+
+```bash
+lager scope NET_NAME trigger edge [OPTIONS]
+```
+
+**Options (in addition to common):**
+
+| Option | Description |
+|--------|-------------|
+| `--slope` | Trigger slope: `rising`, `falling`, `both` |
+
+**Examples:**
+
+```bash
+# Rising edge at 1.5V
+lager scope ANALOG1 trigger edge --slope rising --level 1.5 --box my-box
+
+# Falling edge in single capture mode
+lager scope ANALOG1 trigger edge --slope falling --level 0.5 --mode single --box my-box
+
+# Either edge with AC coupling
+lager scope ANALOG1 trigger edge --slope both --coupling ac --level 0 --box my-box
+```
+
+### `trigger pulse`
+
+Set pulse width trigger (Rigol only). Triggers when pulse width meets specified conditions.
+
+```bash
+lager scope NET_NAME trigger pulse [OPTIONS]
+```
+
+**Options (in addition to common):**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--trigger-on` | Condition (see table below) | `positive` |
+| `--upper SECONDS` | Upper pulse width limit | - |
+| `--lower SECONDS` | Lower pulse width limit | - |
+
+**Trigger-on Conditions:**
+
+| Condition | Description |
+|-----------|-------------|
+| `positive` | Positive pulse |
+| `negative` | Negative pulse |
+| `positive_greater` | Positive pulse wider than upper limit |
+| `negative_greater` | Negative pulse wider than upper limit |
+| `positive_less` | Positive pulse narrower than upper limit |
+| `negative_less` | Negative pulse narrower than upper limit |
+
+**Examples:**
+
+```bash
+# Detect short positive glitches (< 100us)
+lager scope ANALOG1 trigger pulse --trigger-on positive_less --upper 0.0001 --box my-box
+
+# Detect long negative pulses (> 1ms)
+lager scope ANALOG1 trigger pulse --trigger-on negative_greater --upper 0.001 --level 1.0 --box my-box
+```
+
+### `trigger i2c`
+
+Set I2C protocol trigger (Rigol only). Triggers on I2C bus events.
+
+```bash
+lager scope NET_NAME trigger i2c [OPTIONS]
+```
+
+**Options (in addition to common mode/coupling):**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--source-scl NET` | SCL source net | - |
+| `--source-sda NET` | SDA source net | - |
+| `--level-scl VOLTS` | SCL trigger level | - |
+| `--level-sda VOLTS` | SDA trigger level | - |
+| `--trigger-on` | Condition (see table below) | `start` |
+| `--address HEX` | I2C address (hex) | - |
+| `--addr-width` | Address width: `7`, `8`, `10` bits | `7` |
+| `--data HEX` | Data pattern to match (hex) | - |
+| `--data-width INT` | Data width in bits | `8` |
+| `--direction` | Direction: `read`, `write`, `read_write` | `read_write` |
+
+**Trigger-on Conditions:**
+
+| Condition | Description |
+|-----------|-------------|
+| `start` | Start condition |
+| `restart` | Repeated start condition |
+| `stop` | Stop condition |
+| `ack_miss` | Missing ACK (NACK) |
+| `address` | Specific address match |
+| `data` | Specific data match |
+| `addr_data` | Address + data match |
+
+**Examples:**
+
+```bash
+# Trigger on I2C start condition
+lager scope ANALOG1 trigger i2c \
+  --source-scl SCL_NET --source-sda SDA_NET \
+  --trigger-on start --box my-box
+
+# Trigger on specific I2C address (7-bit)
+lager scope ANALOG1 trigger i2c \
+  --source-scl SCL_NET --source-sda SDA_NET \
+  --trigger-on address --address 0x48 --box my-box
+
+# Trigger on I2C write to address 0x76 with data 0xF4
+lager scope ANALOG1 trigger i2c \
+  --source-scl SCL_NET --source-sda SDA_NET \
+  --trigger-on addr_data --address 0x76 --data 0xF4 \
+  --direction write --box my-box
+
+# Trigger on NACK (missing acknowledgment)
+lager scope ANALOG1 trigger i2c \
+  --source-scl SCL_NET --source-sda SDA_NET \
+  --trigger-on ack_miss --box my-box
+```
+
+### `trigger spi`
+
+Set SPI protocol trigger (Rigol only). Triggers on SPI bus events.
+
+```bash
+lager scope NET_NAME trigger spi [OPTIONS]
+```
+
+**Options (in addition to common mode/coupling):**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--source-mosi-miso NET` | MOSI/MISO source net | - |
+| `--source-sck NET` | SCK (clock) source net | - |
+| `--source-cs NET` | CS (chip select) source net | - |
+| `--level-mosi-miso VOLTS` | MOSI/MISO trigger level | - |
+| `--level-sck VOLTS` | SCK trigger level | - |
+| `--level-cs VOLTS` | CS trigger level | - |
+| `--trigger-on` | Condition: `timeout`, `cs` | `cs` |
+| `--data HEX` | Data pattern to match (hex) | - |
+| `--data-width INT` | Data width in bits | `8` |
+| `--clk-slope` | Clock edge: `rising`, `falling` | `rising` |
+| `--cs-idle` | CS idle state: `high`, `low` | `high` |
+| `--timeout SECONDS` | Timeout value in seconds | - |
+
+**Examples:**
+
+```bash
+# Trigger on CS assertion
+lager scope ANALOG1 trigger spi \
+  --source-mosi-miso MOSI_NET --source-sck SCK_NET --source-cs CS_NET \
+  --trigger-on cs --box my-box
+
+# Trigger on SPI data pattern with falling clock edge
+lager scope ANALOG1 trigger spi \
+  --source-mosi-miso MOSI_NET --source-sck SCK_NET --source-cs CS_NET \
+  --data 0xFF --clk-slope falling --box my-box
+```
+
+### `trigger uart`
+
+Set UART protocol trigger (Rigol only). Triggers on UART serial events.
+
+```bash
+lager scope NET_NAME trigger uart [OPTIONS]
+```
+
+**Options (in addition to common):**
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--baud INT` | Baud rate | `9600` |
+| `--parity` | Parity: `none`, `even`, `odd` | `none` |
+| `--stop-bits` | Stop bits: `1`, `1.5`, `2` | `1` |
+| `--data-width INT` | Data width in bits | `8` |
+| `--trigger-on` | Condition: `start`, `stop`, `data`, `error` | `start` |
+| `--data HEX` | Data pattern to match (hex) | - |
+
+**Examples:**
+
+```bash
+# Trigger on UART start bit at 115200 baud
+lager scope ANALOG1 trigger uart \
+  --source UART_TX --baud 115200 --trigger-on start --box my-box
+
+# Trigger on specific UART data byte
+lager scope ANALOG1 trigger uart \
+  --source UART_TX --baud 9600 --trigger-on data --data 0x55 --box my-box
+
+# Trigger on UART framing error
+lager scope ANALOG1 trigger uart \
+  --source UART_RX --baud 115200 --trigger-on error --box my-box
+```
+
+---
+
+## Cursor Subcommands (Rigol)
+
+Control manual XY cursors on Rigol oscilloscopes for precise time and voltage measurements. Cursors A and B can be positioned independently, and the oscilloscope calculates the delta between them.
+
+### `cursor set-a` / `cursor set-b`
+
+Set the absolute position of cursor A or B.
+
+```bash
+lager scope NET_NAME cursor set-a [--x FLOAT] [--y FLOAT] [--box BOX] [--mcu MCU]
+lager scope NET_NAME cursor set-b [--x FLOAT] [--y FLOAT] [--box BOX] [--mcu MCU]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--x` | X coordinate (time position) |
+| `--y` | Y coordinate (voltage position) |
+
+### `cursor move-a` / `cursor move-b`
+
+Move a cursor by a relative offset from its current position.
+
+```bash
+lager scope NET_NAME cursor move-a [--x FLOAT] [--y FLOAT] [--box BOX] [--mcu MCU]
+lager scope NET_NAME cursor move-b [--x FLOAT] [--y FLOAT] [--box BOX] [--mcu MCU]
+```
+
+**Options:**
+
+| Option | Description |
+|--------|-------------|
+| `--x` | Relative X movement (delta) |
+| `--y` | Relative Y movement (delta) |
+
+### `cursor hide`
+
+Hide the cursor display.
+
+```bash
+lager scope NET_NAME cursor hide [--box BOX] [--mcu MCU]
+```
+
+**Examples:**
+
+```bash
+# Position cursors for time measurement
+lager scope ANALOG1 cursor set-a --x -0.001 --box my-box
+lager scope ANALOG1 cursor set-b --x 0.001 --box my-box
+
+# Fine-tune cursor B position
+lager scope ANALOG1 cursor move-b --x 0.0001 --box my-box
+
+# Set voltage measurement cursors
+lager scope ANALOG1 cursor set-a --y 0.5 --box my-box
+lager scope ANALOG1 cursor set-b --y 3.3 --box my-box
+
+# Hide cursors when done
+lager scope ANALOG1 cursor hide --box my-box
+```
+
+---
+
+## Stream Subcommands (PicoScope)
+
+Stream oscilloscope data in real time from PicoScope devices. The streaming system uses a dedicated daemon on the Lager Box with a web-based visualization interface.
+
+### Daemon Architecture
+
+The PicoScope streaming daemon communicates over multiple ports:
+
+| Port | Purpose |
+|------|---------|
+| 8080 | HTTP server for web visualization UI |
+| 8082 | WebSocket command channel (browser) |
+| 8083 | WebTransport streaming (browser data) |
+| 8085 | CLI command port (WebSocket) |
+
+### `stream start`
+
+Start oscilloscope streaming acquisition with web visualization.
+
+```bash
+lager scope NET_NAME stream start [OPTIONS]
+```
+
+**Options:**
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--channel` | `-c` | Channel: `A`, `B`, `1`, `2` | `A` |
+| `--volts-per-div` | `-v` | Vertical scale (V/div) | `1.0` |
+| `--time-per-div` | `-t` | Horizontal scale (s/div) | `0.001` |
+| `--trigger-level` | | Trigger threshold voltage | `0.0` |
+| `--trigger-slope` | | Slope: `rising`, `falling`, `either` | `rising` |
+| `--capture-mode` | | Mode: `auto`, `normal`, `single` | `auto` |
+| `--coupling` | | Coupling: `dc`, `ac` | `dc` |
+| `--quiet` | `-q` | Minimal output | |
+| `--json` | | JSON output format | |
+| `--verbose` | | Verbose debugging output | |
+
+**Examples:**
+
+```bash
+# Start streaming on channel A with default settings
+lager scope PICO1 stream start --box my-box
+
+# Start with specific configuration
+lager scope PICO1 stream start -c A -v 2.0 -t 0.0001 --box my-box
+
+# Start with trigger configuration
+lager scope PICO1 stream start \
+  --trigger-level 1.5 --trigger-slope rising \
+  --capture-mode normal --box my-box
+
+# Start in single capture mode with AC coupling
+lager scope PICO1 stream start \
+  --capture-mode single --coupling ac --box my-box
+```
+
+### `stream stop`
+
+Stop oscilloscope streaming acquisition.
+
+```bash
+lager scope NET_NAME stream stop [--box BOX]
+```
+
+### `stream status`
+
+Check oscilloscope streaming daemon status.
+
+```bash
+lager scope NET_NAME stream status [--box BOX]
+```
+
+### `stream web`
+
+Open web browser for real-time oscilloscope visualization.
+
+```bash
+lager scope NET_NAME stream web [--box BOX] [--port PORT]
+```
+
+**Options:**
+- `--port` - HTTP server port (default: 8080)
+
+The web interface provides an HTML5 oscilloscope display with real-time waveform rendering via WebTransport.
+
+### `stream capture`
+
+Capture oscilloscope waveform data to a CSV file.
+
+```bash
+lager scope NET_NAME stream capture [OPTIONS]
+```
+
+**Options:**
+
+| Option | Short | Description | Default |
+|--------|-------|-------------|---------|
+| `--output` | `-o` | CSV output file path | `scope_data.csv` |
+| `--duration` | `-d` | Capture duration in seconds (0.001-3600) | `1.0` |
+| `--samples` | `-n` | Maximum samples to capture (1-100M) | unlimited |
+| `--quiet` | `-q` | Minimal output | |
+| `--json` | | JSON output format | |
+| `--verbose` | | Verbose debugging output | |
+
+**Examples:**
+
+```bash
+# Capture 1 second of data (default)
+lager scope PICO1 stream capture --box my-box
+
+# Capture 5 seconds to specific file
+lager scope PICO1 stream capture -o waveform.csv -d 5.0 --box my-box
+
+# Capture up to 1M samples
+lager scope PICO1 stream capture -n 1000000 -o data.csv --box my-box
+
+# Capture with JSON output format
+lager scope PICO1 stream capture --json --box my-box
+```
+
+### `stream config`
+
+Configure oscilloscope streaming settings without starting/stopping acquisition.
+
+```bash
+lager scope NET_NAME stream config [OPTIONS]
+```
+
+**Options:**
+
+| Option | Short | Description |
+|--------|-------|-------------|
+| `--channel` | `-c` | Channel: `A`, `B`, `1`, `2` |
+| `--volts-per-div` | `-v` | Volts per division |
+| `--time-per-div` | `-t` | Time per division (seconds) |
+| `--trigger-level` | | Trigger level (volts) |
+| `--trigger-source` | | Trigger source channel: `A`, `B`, `1`, `2` |
+| `--trigger-slope` | | Slope: `rising`, `falling`, `either` |
+| `--capture-mode` | | Mode: `auto`, `normal`, `single` |
+| `--coupling` | | Coupling: `dc`, `ac` |
+| `--enable` / `--disable` | | Enable or disable channel |
+
+**Examples:**
+
+```bash
+# Change vertical scale while streaming
+lager scope PICO1 stream config -v 0.5 --box my-box
+
+# Switch to channel B
+lager scope PICO1 stream config -c B --enable --box my-box
+
+# Change trigger settings
+lager scope PICO1 stream config --trigger-level 2.0 --trigger-slope falling --box my-box
+
+# Switch to single capture mode
+lager scope PICO1 stream config --capture-mode single --box my-box
+```
+
+---
+
+## Examples
+
+### Basic Rigol Workflow
+
+```bash
+# Enable scope channel
+lager scope ANALOG1 enable --box my-box
+
+# Auto-scale to find signal
+lager scope ANALOG1 autoscale --box my-box
+
+# Fine-tune settings
+lager scope ANALOG1 scale 0.5 --box my-box
+lager scope ANALOG1 timebase 0.001 --box my-box
+
+# Start continuous capture
+lager scope ANALOG1 start --box my-box
+
+# Take measurements
+lager scope ANALOG1 measure freq --display --box my-box
+lager scope ANALOG1 measure vpp --display --box my-box
+
+# Single capture mode
+lager scope ANALOG1 start --single --box my-box
+
+# Stop capture
+lager scope ANALOG1 stop --box my-box
+```
+
+### Channel Configuration
+
+```bash
+# Configure for 10x probe at 500mV/div, 1ms/div
+lager scope ANALOG1 probe 10 --box my-box
+lager scope ANALOG1 scale 0.5 --box my-box
+lager scope ANALOG1 timebase 0.001 --box my-box
+
+# Set AC coupling for audio signals
+lager scope ANALOG1 coupling ac --box my-box
+
+# Force trigger when signal doesn't meet criteria
+lager scope ANALOG1 force --box my-box
+```
+
+### Measurements
+
+```bash
+# Time measurements
+lager scope ANALOG1 measure freq --display --box my-box
+lager scope ANALOG1 measure period --box my-box
+lager scope ANALOG1 measure duty-cycle-pos --box my-box
+
+# Voltage measurements
+lager scope ANALOG1 measure vpp --box my-box
+lager scope ANALOG1 measure vrms --display --box my-box
+lager scope ANALOG1 measure vmax --box my-box
+```
+
+### Triggering
+
+```bash
+# Edge trigger
+lager scope ANALOG1 trigger edge --slope rising --level 1.5 --box my-box
+
+# Pulse width trigger (glitch detection)
+lager scope ANALOG1 trigger pulse --trigger-on positive_less --upper 0.0001 --box my-box
+
+# UART trigger at 115200 baud
+lager scope ANALOG1 trigger uart \
+  --source UART_NET --baud 115200 --trigger-on start --box my-box
+
+# I2C trigger on address 0x48
+lager scope ANALOG1 trigger i2c \
+  --source-scl SCL --source-sda SDA \
+  --trigger-on address --address 0x48 --box my-box
+
+# SPI trigger on chip select
+lager scope ANALOG1 trigger spi \
+  --source-mosi-miso MOSI --source-sck SCK --source-cs CS \
+  --trigger-on cs --box my-box
+```
+
+### Cursor Measurements
+
+```bash
+# Measure time between two events
+lager scope ANALOG1 cursor set-a --x -0.001 --box my-box
+lager scope ANALOG1 cursor set-b --x 0.002 --box my-box
+
+# Measure voltage difference
+lager scope ANALOG1 cursor set-a --y 0.0 --box my-box
+lager scope ANALOG1 cursor set-b --y 3.3 --box my-box
+
+# Clean up
+lager scope ANALOG1 cursor hide --box my-box
+```
+
+### PicoScope Streaming
+
+```bash
+# Start streaming with default settings
+lager scope PICO1 stream start --box my-box
+
+# Open web visualization
+lager scope PICO1 stream web --box my-box
+
+# Capture data to file
+lager scope PICO1 stream capture -o waveform.csv -d 5.0 --box my-box
+
+# Adjust settings while streaming
+lager scope PICO1 stream config -v 2.0 -t 0.0001 --box my-box
+
+# Check streaming status
+lager scope PICO1 stream status --box my-box
+
+# Stop streaming
+lager scope PICO1 stream stop --box my-box
+```
+
+---
+
+## Command Structure
+
+```
+scope [NETNAME] [--box BOX]
+  Basic Control
+  ├── enable [--mcu]
+  ├── disable [--mcu]
+  ├── start [--mcu] [--single]
+  ├── stop [--mcu]
+  └── force [--mcu]
+
+  Channel Configuration (Rigol)
+  ├── scale VOLTS_PER_DIV [--mcu]
+  ├── coupling {dc|ac|gnd} [--mcu]
+  ├── probe {1|10|100|1000} [--mcu]
+  ├── timebase SECONDS_PER_DIV [--mcu]
+  └── autoscale [--mcu]
+
+  Measurements (Rigol)
+  └── measure
+      ├── period [--display] [--cursor]
+      ├── freq [--display] [--cursor]
+      ├── vpp [--display] [--cursor]
+      ├── vmax [--display] [--cursor]
+      ├── vmin [--display] [--cursor]
+      ├── vrms [--display] [--cursor]
+      ├── vavg [--display] [--cursor]
+      ├── pulse-width-pos [--display] [--cursor]
+      ├── pulse-width-neg [--display] [--cursor]
+      ├── duty-cycle-pos [--display] [--cursor]
+      └── duty-cycle-neg [--display] [--cursor]
+
+  Triggers
+  └── trigger
+      ├── edge [--slope] [--level] [--mode] [--coupling] [--source]
+      ├── pulse [--trigger-on] [--upper] [--lower] [--level] ...
+      ├── i2c [--source-scl] [--source-sda] [--trigger-on] [--address] ...
+      ├── spi [--source-mosi-miso] [--source-sck] [--source-cs] ...
+      └── uart [--baud] [--parity] [--trigger-on] [--data] ...
+
+  Cursors (Rigol)
+  └── cursor
+      ├── set-a [--x] [--y]
+      ├── set-b [--x] [--y]
+      ├── move-a [--x] [--y]
+      ├── move-b [--x] [--y]
+      └── hide
+
+  Streaming (PicoScope)
+  └── stream
+      ├── start [-c] [-v] [-t] [--trigger-level] [--trigger-slope] ...
+      ├── stop
+      ├── status
+      ├── web [--port]
+      ├── capture [-o] [-d] [-n] [--quiet] [--json] [--verbose]
+      └── config [-c] [-v] [-t] [--enable/--disable] ...
+```
+
+---
+
+## Notes
+
+- Net names refer to names assigned when setting up your testbed with `lager nets`
+- The `--mcu` option is available on all commands and is passed to the backend; use it when multiple MCUs share a scope channel
+- Streaming commands are only available for PicoScope devices
+- Measurement and cursor commands are only available for Rigol devices
+- Edge trigger is the only trigger type supported on both PicoScope and Rigol
+- Web visualization requires port 8080 to be accessible on the Lager Box
+- Validation rejects values outside the allowed ranges before sending to hardware
+- Use `lager nets` to see available scope nets
+
+## See Also
+
+- [Logic Analyzer](/source/reference/cli/logic) -- Digital signal capture and protocol decode
+- [Python Scope API](/source/reference/python/scope) -- Automate oscilloscope operations in Python scripts

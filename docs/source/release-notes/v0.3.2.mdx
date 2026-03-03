@@ -1,0 +1,46 @@
+---
+title: "Version 0.3.2"
+description: "January 07, 2026"
+---
+
+## <u>Features</u>
+
+### Box Flag Support for Install and Uninstall
+- Added `--box` flag to `lager install` and `lager uninstall` commands
+- Allows using box names from `.lager` config instead of IP addresses
+- Simplifies box management workflows
+
+## <u>Bug Fixes</u>
+
+- Fixed `lager update` command issues that prevented proper updates
+- Fixed `lager install` command to ensure reliable installation
+
+## <u>Improvements</u>
+
+### Preserve User Configuration on Uninstall
+- Changed `lager uninstall` default behavior to preserve `/etc/lager` directory
+- Saved nets and user packages are now kept by default
+- Use `--all` flag to remove all configuration (previous behavior)
+- Prevents accidental loss of hardware configuration
+
+### Performance Optimization
+- Removed USB 202 library to reduce installation time
+- Faster deployment and update operations
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.2
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.2/)

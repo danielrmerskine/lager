@@ -1,0 +1,92 @@
+---
+title: DAC
+description: Control DAC output on box
+---
+
+Control DAC (Digital-to-Analog Converter) output on your device. The DAC command sets a precise analog voltage on a DAC net, useful for generating reference voltages, bias signals, or test stimuli.
+
+## Syntax
+
+```bash
+lager dac [OPTIONS] NET [VOLTAGE]
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Arguments
+
+- `NET` - Name of the DAC Net to control
+- `VOLTAGE` - Voltage value in volts to output
+
+## Supported Hardware
+
+| Manufacturer | Model | Channels | Output Range | Resolution |
+|--------------|-------|----------|--------------|------------|
+| LabJack | T7 | 2 (DAC0-DAC1) | 0 to 5 V | 16-bit |
+| Measurement Computing | USB-202 | 2 (DAC0-DAC1) | 0 to 5 V | 12-bit |
+
+### Channel Naming
+
+When creating DAC nets, the channel name depends on the hardware:
+
+**LabJack T7:** `DAC0`, `DAC1`, or numeric `0`, `1`
+
+**MCC USB-202:** `DAC0`, `DAC1`, `AOUT0`, `AOUT1`, or numeric `0`, `1`
+
+## Default Net
+
+Set a default DAC net to avoid specifying the name each time:
+
+```bash
+lager defaults add --dac-net VOLTAGE_OUTPUT
+```
+
+Then:
+
+```bash
+lager dac 3.3
+```
+
+## Examples
+
+```bash
+# Set DAC output to 3.3V
+lager dac VOLTAGE_OUTPUT 3.3 --box my-lager-box
+
+# Set DAC output to 5.0V
+lager dac POWER_RAIL 5.0 --box my-lager-box
+
+# Set DAC output to 1.8V
+lager dac REFERENCE_VOLTAGE 1.8 --box my-lager-box
+
+# Set DAC output to 0V
+lager dac SIGNAL_GENERATOR 0.0 --box my-lager-box
+```
+
+## Troubleshooting
+
+| Issue | Cause | Fix |
+|-------|-------|-----|
+| Output stuck at 0V | Net not configured or wrong channel | Verify net configuration with `lager nets --box <box>` |
+| Voltage inaccurate | Resolution limit or load effects | Both LabJack T7 and USB-202 output 0-5V; verify your circuit doesn't draw too much current from the DAC output |
+| "Net not found" | Typo or net not created | Check available nets with `lager nets --box <box>`. Net names are case-sensitive. |
+
+## Notes
+
+- Net names (e.g., `VOLTAGE_OUTPUT`, `POWER_RAIL`) refer to names assigned when setting up your testbed
+- Voltage values are specified in volts
+- Only works with nets of type `dac`
+- Ensure the target box has DAC nets properly configured
+- DAC outputs provide precise voltage control for analog circuits
+- Both supported hardware models output 0-5V
+- USB-202 channels can be specified as `0`-`1`, `DAC0`-`DAC1`, or `AOUT0`-`AOUT1`
+
+## See Also
+
+- [ADC](/source/reference/cli/adc) -- Analog-to-digital converter input (the complement of DAC)
+- [Python DAC API](/source/reference/python/dac) -- Set DAC output in Python scripts

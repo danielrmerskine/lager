@@ -1,0 +1,5 @@
+# Copyright 2024-2026 Lager Data LLC
+# SPDX-License-Identifier: Apache-2.0
+
+if [ "$HAS_UART_DEVICE" = "true" ]; then
+  if lager nets create "NETNAME_PLACEHOLDER" uart "$UART_SERIAL" "$UART_VISA" --box $BOX 2>&1 | grep -qi "Created\|added\|success"; then

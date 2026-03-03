@@ -1,0 +1,351 @@
+---
+title: I2C
+description: Perform I2C data transfers
+---
+
+Perform I2C (Inter-Integrated Circuit) data transfers with devices connected to a Lagerbox. I2C is a synchronous serial protocol using two lines: SDA (data) and SCL (clock).
+
+## Syntax
+
+```bash
+lager i2c [NETNAME] [OPTIONS] [SUBCOMMAND]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NETNAME` | I2C net name (optional if default is set via `lager defaults add --i2c-net`) |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+
+When invoked without a subcommand, lists I2C nets on the box (or shows configuration for the specified net).
+
+---
+
+## Subcommands
+
+### `config`
+
+Configure I2C bus parameters. Settings persist across subsequent commands.
+
+```bash
+lager i2c NETNAME config [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--frequency FREQ` | Clock frequency (e.g., `100k`, `400k`, `1M`) |
+| `--pull-ups on\|off` | Enable/disable internal pull-ups (Aardvark only) |
+
+**Examples:**
+
+```bash
+# Set I2C clock to 400kHz with internal pull-ups
+lager i2c MY_I2C config --frequency 400k --pull-ups on
+
+# Set clock to 100kHz (standard mode)
+lager i2c MY_I2C config --frequency 100k
+```
+
+---
+
+### `scan`
+
+Scan the I2C bus for connected devices. Probes each address and reports those that respond with an ACK.
+
+```bash
+lager i2c NETNAME scan [OPTIONS]
+```
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--box BOX` | Lagerbox name or IP address | |
+| `--start ADDR` | Start address in hex | `0x08` |
+| `--end ADDR` | End address in hex | `0x77` |
+
+The default range `0x08`-`0x77` excludes reserved I2C addresses.
+
+**Examples:**
+
+```bash
+# Scan default address range
+lager i2c MY_I2C scan --box my-lager-box
+
+# Scan specific range
+lager i2c MY_I2C scan --start 0x20 --end 0x27
+```
+
+---
+
+### `read`
+
+Read bytes from an I2C device.
+
+```bash
+lager i2c NETNAME read NUM_BYTES [OPTIONS]
+```
+
+| Argument | Description |
+|----------|-------------|
+| `NUM_BYTES` | Number of bytes to read (0 or more) |
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--box BOX` | Lagerbox name or IP address | |
+| `--address ADDR` | Device address in hex (e.g., `0x48`) | **Required** |
+| `--frequency FREQ` | Clock frequency override (e.g., `100k`, `400k`) | |
+| `--format FORMAT` | Output format: `hex`, `bytes`, `json` | `hex` |
+
+**Examples:**
+
+```bash
+# Read 4 bytes from device at address 0x48
+lager i2c MY_I2C read 4 --address 0x48
+
+# Read 2 bytes with JSON output
+lager i2c MY_I2C read 2 --address 0x48 --format json
+
+# Read with frequency override
+lager i2c MY_I2C read 4 --address 0x48 --frequency 100k
+```
+
+---
+
+### `write`
+
+Write bytes to an I2C device.
+
+```bash
+lager i2c NETNAME write DATA [OPTIONS]
+```
+
+| Argument | Description |
+|----------|-------------|
+| `DATA` | Hex data to write (e.g., `0x0A03`, `0a 03`, `0a,03`) |
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--box BOX` | Lagerbox name or IP address | |
+| `--address ADDR` | Device address in hex (e.g., `0x48`) | **Required** |
+| `--data-file PATH` | File containing binary data to write | |
+| `--frequency FREQ` | Clock frequency override | |
+| `--format FORMAT` | Output format: `hex`, `bytes`, `json` | `hex` |
+
+Provide data either as the `DATA` argument or via `--data-file`, but not both.
+
+**Examples:**
+
+```bash
+# Write register address 0x0A followed by value 0x03
+lager i2c MY_I2C write 0x0A03 --address 0x48
+
+# Write using space-separated hex bytes
+lager i2c MY_I2C write "0a 03" --address 0x48
+
+# Write from a binary file
+lager i2c MY_I2C write --data-file config.bin --address 0x48
+```
+
+---
+
+### `transfer`
+
+Write then read in a single I2C transaction using a repeated start condition. This is the standard pattern for reading registers: write the register address, then read the register value without releasing the bus.
+
+```bash
+lager i2c NETNAME transfer NUM_BYTES [OPTIONS]
+```
+
+| Argument | Description |
+|----------|-------------|
+| `NUM_BYTES` | Number of bytes to read (0 or more) |
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--box BOX` | Lagerbox name or IP address | |
+| `--address ADDR` | Device address in hex (e.g., `0x48`) | **Required** |
+| `--data DATA` | Hex data to write before reading (e.g., register address) | |
+| `--data-file PATH` | File containing data to write before reading | |
+| `--frequency FREQ` | Clock frequency override | |
+| `--format FORMAT` | Output format: `hex`, `bytes`, `json` | `hex` |
+
+**Examples:**
+
+```bash
+# Read 2 bytes from register 0x0A on device 0x48
+lager i2c MY_I2C transfer 2 --address 0x48 --data 0x0A
+
+# Read temperature from a sensor (register 0x00, 2 bytes)
+lager i2c MY_I2C transfer 2 --address 0x76 --data 0x00
+
+# Read with JSON output
+lager i2c MY_I2C transfer 4 --address 0x48 --data 0x0A --format json
+```
+
+---
+
+## Hex Data Formats
+
+Data arguments accept multiple hex formats:
+
+| Format | Example | Parsed As |
+|--------|---------|-----------|
+| Prefixed continuous | `0x0a03` | `[0x0a, 0x03]` |
+| Unprefixed continuous | `0a03` | `[0x0a, 0x03]` |
+| Space-separated | `0a 03` | `[0x0a, 0x03]` |
+| Comma-separated | `0a,03` | `[0x0a, 0x03]` |
+| Single byte | `0x0a` | `[0x0a]` |
+
+All values must be within byte range (`0x00`-`0xFF`).
+
+---
+
+## Address Format
+
+I2C addresses are 7-bit values (`0x00`-`0x7F`). You can specify addresses in hex or decimal:
+
+| Format | Example | Value |
+|--------|---------|-------|
+| Hex prefixed | `0x48` | 72 |
+| Hex unprefixed | `48` | 72 |
+| Decimal | `72` | 72 |
+
+---
+
+## Frequency Format
+
+Clock frequencies accept numeric values with optional suffixes:
+
+| Format | Example | Value |
+|--------|---------|-------|
+| Plain Hz | `100000` | 100 kHz |
+| kHz suffix | `100k` | 100 kHz |
+| MHz suffix | `1M` | 1 MHz |
+| Hz suffix | `400000hz` | 400 kHz |
+
+---
+
+## Supported Hardware
+
+| Adapter | Pins | Pull-ups | Notes |
+|---------|------|----------|-------|
+| LabJack T7 | Configurable FIO pins (e.g., FIO4/FIO5) | External only | ~450 kHz max (throttle=0) |
+| Aardvark USB | Fixed SDA/SCL | Internal (switchable) | Up to 800 kHz |
+| FT232H | Configurable | External only | MPSSE-based I2C |
+
+---
+
+## Net Configuration
+
+I2C nets are configured in `saved_nets.json` on the box. Example net record:
+
+```json
+{
+  "name": "my_i2c",
+  "role": "i2c",
+  "instrument": "labjack_t7",
+  "pin": "FIO4-FIO5",
+  "params": {
+    "sda_pin": 4,
+    "scl_pin": 5,
+    "frequency_hz": 100000,
+    "pull_ups": false
+  }
+}
+```
+
+For Aardvark adapters:
+
+```json
+{
+  "name": "my_i2c",
+  "role": "i2c",
+  "instrument": "aardvark",
+  "pin": "I2C0",
+  "params": {
+    "frequency_hz": 400000,
+    "pull_ups": true
+  }
+}
+```
+
+---
+
+## Output Formats
+
+| Format | Description |
+|--------|-------------|
+| `hex` | Space-separated hex bytes (e.g., `0a 03 ff`) |
+| `bytes` | Raw byte values |
+| `json` | JSON object with data array and metadata |
+
+---
+
+## Examples
+
+```bash
+# List all I2C nets on a box
+lager i2c --box my-lager-box
+
+# Show configuration for a specific net
+lager i2c MY_I2C --box my-lager-box
+
+# Configure bus speed and pull-ups
+lager i2c MY_I2C config --frequency 400k --pull-ups on
+
+# Scan for devices
+lager i2c MY_I2C scan
+
+# Read WHO_AM_I register from an accelerometer
+lager i2c MY_I2C transfer 1 --address 0x68 --data 0x75
+
+# Write configuration to a sensor
+lager i2c MY_I2C write 0x2003 --address 0x76
+
+# Read 6 bytes of sensor data
+lager i2c MY_I2C read 6 --address 0x76
+```
+
+---
+
+## Troubleshooting
+
+### No Devices Found on Scan
+
+- Verify SDA and SCL wiring
+- Check that pull-up resistors are present (4.7k typical for 100kHz)
+- For Aardvark: try `--pull-ups on` to enable internal pull-ups
+- Confirm device power supply is connected
+
+### Bus Errors
+
+- LabJack T7: The first transaction after connection may return a bus error; this is normal and handled automatically
+- Try reducing frequency with `--frequency 100k`
+- Check for bus contention (multiple masters)
+
+### NACK Errors
+
+- Verify the device address (some datasheets show 8-bit shifted addresses)
+- Ensure the device is powered and not in reset
+- Check for address conflicts with other devices on the bus
+
+---
+
+## Notes
+
+- Default I2C net can be set with `lager defaults add --i2c-net NETNAME`
+- LabJack T7 operates at ~450 kHz regardless of requested frequency due to hardware limitations
+- Aardvark adapters support internal pull-ups that can be toggled via `config --pull-ups`
+- The `transfer` command uses I2C repeated start for atomic write-then-read operations
+
+## See Also
+
+- [SPI](/source/reference/cli/spi) -- SPI bus communication (the other common serial protocol)
+- [Python I2C API](/source/reference/python/i2c) -- Automate I2C operations in Python scripts
+- [Glossary](/source/getting-started/glossary) -- Definitions of I2C, SPI, and other terms

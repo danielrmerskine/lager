@@ -1,0 +1,59 @@
+---
+title: "Version 0.3.16"
+description: "January 26, 2026"
+---
+
+## <u>Features</u>
+
+### J-Link Script File Support
+- Added support for custom J-Link script files (`.JLinkScript`) in debug commands
+- Scripts can be passed to enable advanced initialization sequences for custom hardware configurations
+- Useful for enabling trace clocks, custom target initialization, and specialized debug setups
+
+### Expanded Device Support for J-Link Debugging
+- Dramatically expanded ARM architecture detection to support 70+ device families
+- Now supports: Nordic (nRF51/52/53/91), STM32 (all families), NXP (LPC, Kinetis, i.MX RT), TI (Stellaris, Tiva-C, CC26xx), Microchip/Atmel (SAM), Silicon Labs (EFM32/EFR32), Renesas (RA), Dialog, Infineon, and more
+- Unknown devices now gracefully fall back to a default architecture instead of failing
+
+## <u>Bug Fixes</u>
+
+### Resource Busy Error Fix
+- Fixed "Resource Busy" errors when reconnecting to VISA/USB instruments
+- Devices are now properly closed before being removed from the cache
+- Added cleanup handler on process exit to release hardware resources
+
+### Debug Reset Reliability
+- Improved debug reset reliability for Cortex-M33 devices (e.g., nRF5340)
+- Reset and memory read operations now use J-Link Commander directly, avoiding GDB register mismatch issues
+
+## <u>Improvements</u>
+
+### Robotic Arm Enhancements
+- Increased default arm move timeout from 5 seconds to 15 seconds for more reliable operation
+- Improved out-of-bounds error messages now show which coordinates are invalid and display workspace limits
+- Updated Rotrics Dexarm workspace bounds to accurate values
+
+### Silent USB Hub Operations
+- USB hub enable/disable/toggle operations now complete silently for cleaner automation output
+
+### Python Compatibility
+- Added Python 3.14 support
+- Updated dependencies for newer Python version compatibility
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.16
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.16/)

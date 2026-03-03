@@ -1,0 +1,157 @@
+---
+title: GPO
+description: Set GPIO output level
+---
+
+Set the digital output level of GPIO pins, with an optional hold mode that keeps the output asserted until interrupted.
+
+## Syntax
+
+```bash
+lager gpo [NETNAME] LEVEL [OPTIONS]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NETNAME` | GPIO net name (optional if default is set). If omitted, lists all available GPIO nets. |
+| `LEVEL` | Output level (see below) |
+
+## Level Values
+
+The following values are accepted (case-insensitive):
+
+| Value | Result |
+|-------|--------|
+| `high`, `on`, `1` | Set pin high |
+| `low`, `off`, `0` | Set pin low |
+| `toggle` | Invert current state |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--hold` | Hold output state (keeps process alive until Ctrl+C) |
+
+---
+
+## Usage
+
+```bash
+# Set pin high
+lager gpo LED1 high --box my-lager-box
+
+# Set pin low
+lager gpo LED1 low
+
+# Toggle pin state
+lager gpo LED1 toggle
+
+# Using numeric values
+lager gpo LED1 1
+lager gpo LED1 0
+
+# List available GPIO nets (omit net name and level)
+lager gpo --box my-lager-box
+```
+
+### Hold Mode
+
+The `--hold` flag keeps the process alive after setting the output level. The pin state is maintained until you press Ctrl+C. This is useful when you need to assert a signal for manual testing or when the pin state would otherwise be reset between CLI invocations.
+
+```bash
+# Hold reset line low until manually released
+lager gpo RESET_N low --hold --box my-lager-box
+# Press Ctrl+C to release
+
+# Hold enable pin high during manual testing
+lager gpo EN high --hold
+# Press Ctrl+C when done
+```
+
+---
+
+## Supported Hardware
+
+| Device | Pins | Voltage |
+|--------|------|---------|
+| LabJack T7 | FIO0-FIO7 | 3.3V logic |
+| MCC USB-202 | DIO0-DIO7 (0-7) | 3.3V/5V TTL |
+| Aardvark | 0-5 (SCL, SDA, MISO, SCK, MOSI, SS) | 3.3V |
+| FT232H | 0-15 (AD0-AD7, AC0-AC7) | 3.3V |
+
+<Note>
+Aardvark and FT232H GPIO support is currently disabled and may be re-enabled in a future release. LabJack T7 and MCC USB-202 are the active GPIO backends.
+</Note>
+
+### Aardvark Pin Mapping
+
+The Aardvark I2C/SPI adapter exposes 6 GPIO pins on its 10-pin header. Pins can be specified by number or signal name:
+
+| Pin | Name | Header Pin |
+|-----|------|------------|
+| 0 | SCL | 1 |
+| 1 | SDA | 3 |
+| 2 | MISO | 5 |
+| 3 | SCK | 7 |
+| 4 | MOSI | 8 |
+| 5 | SS | 9 |
+
+### FT232H Pin Mapping
+
+The FT232H provides 16 GPIO pins across two ports:
+
+| Pins | Names | Description |
+|------|-------|-------------|
+| 0-7 | AD0-AD7 | Port A data pins |
+| 8-15 | AC0-AC7 | Port A control pins |
+
+---
+
+## Examples
+
+```bash
+# Control an LED
+lager gpo LED1 on --box lab-gw
+sleep 1
+lager gpo LED1 off --box lab-gw
+
+# Toggle reset line
+lager gpo RESET_N low
+sleep 0.1
+lager gpo RESET_N high
+
+# Blink pattern
+for i in {1..5}; do
+    lager gpo LED1 toggle
+    sleep 0.5
+done
+
+# Hold a signal during manual testing
+lager gpo BOOT0 high --hold --box lab-gw
+# Ctrl+C to release, then flash firmware
+
+# Assert chip select for manual SPI debugging
+lager gpo CS_N low --hold --box lab-gw
+```
+
+---
+
+## Related Commands
+
+- [`lager gpi`](/source/reference/cli/gpi) - Read GPIO input state
+
+---
+
+## Notes
+
+- GPO is for setting output pins only
+- Use `lager gpi` to read input pins
+- Default net can be set with `lager defaults add --gpio-net`
+- Pin must be configured as output in net configuration
+- Toggle reads current state and inverts it
+- USB-202 channels can be specified as `0`-`7` or `DIO0`-`DIO7`
+- `--hold` keeps the process running; press Ctrl+C to release the pin and exit
+- Without `--hold`, the output level is set and the command exits immediately; the pin retains its state until the next command

@@ -1,0 +1,265 @@
+---
+title: Custom Binaries
+description: Execute custom binaries on the Lager Box
+---
+
+Execute custom binaries that have been uploaded to the Lager Box via the CLI. This is useful for running customer-specific tools, device interaction utilities, or third-party command-line applications.
+
+## Import
+
+```python
+from lager.binaries import run_custom_binary, get_binary_path, list_binaries, BinaryNotFoundError
+```
+
+## Functions
+
+| Function | Description |
+|----------|-------------|
+| `run_custom_binary()` | Execute a custom binary with arguments |
+| `get_binary_path()` | Get the full filesystem path to a binary |
+| `list_binaries()` | List all available custom binaries |
+
+## Exception Classes
+
+| Exception | Description |
+|-----------|-------------|
+| `BinaryNotFoundError` | Binary does not exist or is not executable |
+
+## Function Reference
+
+### `run_custom_binary(binary_name, *args, **kwargs)`
+
+Execute a custom binary that was uploaded via `lager binaries add`.
+
+```python
+from lager.binaries import run_custom_binary
+
+# Simple usage
+result = run_custom_binary('rt_newtmgr', 'image', 'list')
+print(result.stdout)
+
+# With timeout
+result = run_custom_binary('slow_tool', '--verbose', timeout=60)
+
+# Check return code
+if result.returncode != 0:
+    print(f"Error: {result.stderr}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `binary_name` | `str` | - | Name of the binary to run (e.g., 'rt_newtmgr') |
+| `*args` | `str` | - | Arguments to pass to the binary |
+| `timeout` | `int` | `30` | Maximum time in seconds to wait (None for no timeout) |
+| `capture_output` | `bool` | `True` | Capture stdout/stderr |
+| `text` | `bool` | `True` | Return stdout/stderr as strings instead of bytes |
+| `check` | `bool` | `False` | Raise `CalledProcessError` if return code is non-zero |
+| `cwd` | `str` | `None` | Working directory for the process |
+| `env` | `dict` | `None` | Environment variables (inherits from parent if None) |
+| `input` | `str` or `bytes` | `None` | Input to send to stdin |
+
+**Returns:** `subprocess.CompletedProcess` with attributes:
+- `returncode` - Exit code of the process
+- `stdout` - Captured standard output (if `capture_output=True`)
+- `stderr` - Captured standard error (if `capture_output=True`)
+
+**Raises:**
+- `BinaryNotFoundError` - If the binary doesn't exist or isn't executable
+- `subprocess.TimeoutExpired` - If the process times out
+- `subprocess.CalledProcessError` - If `check=True` and return code is non-zero
+
+### `get_binary_path(binary_name)`
+
+Get the full filesystem path to a custom binary.
+
+```python
+from lager.binaries import get_binary_path
+
+path = get_binary_path('rt_newtmgr')
+print(f"Binary located at: {path}")
+# Output: /home/www-data/customer-binaries/rt_newtmgr
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `binary_name` | `str` | Name of the binary (without path) |
+
+**Returns:** `str` - Full path to the binary
+
+**Raises:** `BinaryNotFoundError` - If the binary doesn't exist or isn't executable
+
+### `list_binaries()`
+
+List all available custom binaries on the Lager Box.
+
+```python
+from lager.binaries import list_binaries
+
+binaries = list_binaries()
+print("Available binaries:")
+for name in binaries:
+    print(f"  - {name}")
+```
+
+**Returns:** `list[str]` - Sorted list of binary names
+
+## Examples
+
+### Run Device Interaction Tool
+
+```python
+from lager.binaries import run_custom_binary, BinaryNotFoundError
+
+try:
+    # Run rt_newtmgr to list images on device
+    result = run_custom_binary('rt_newtmgr', 'image', 'list', '-c', '/dev/ttyUSB0')
+
+    if result.returncode == 0:
+        print("Images on device:")
+        print(result.stdout)
+    else:
+        print(f"Error: {result.stderr}")
+
+except BinaryNotFoundError as e:
+    print(f"Binary not found: {e}")
+```
+
+### Run with Custom Environment
+
+```python
+from lager.binaries import run_custom_binary
+
+# Pass environment variables to the binary
+result = run_custom_binary(
+    'my_tool',
+    '--config', 'test.json',
+    env={'DEBUG': '1', 'LOG_LEVEL': 'verbose'},
+    timeout=60
+)
+
+print(result.stdout)
+```
+
+### Check Available Binaries
+
+```python
+from lager.binaries import list_binaries, run_custom_binary
+
+# List what's available
+binaries = list_binaries()
+
+if not binaries:
+    print("No custom binaries installed.")
+    print("Use 'lager binaries add <file> --box <lager-box>' to upload binaries.")
+else:
+    print(f"Found {len(binaries)} custom binaries:")
+    for name in binaries:
+        print(f"  - {name}")
+```
+
+### Error Handling
+
+```python
+from lager.binaries import run_custom_binary, BinaryNotFoundError
+import subprocess
+
+try:
+    result = run_custom_binary('my_tool', '--version', check=True, timeout=10)
+    print(f"Version: {result.stdout.strip()}")
+
+except BinaryNotFoundError as e:
+    print(f"Binary not available: {e}")
+
+except subprocess.TimeoutExpired:
+    print("Command timed out")
+
+except subprocess.CalledProcessError as e:
+    print(f"Command failed with exit code {e.returncode}")
+    print(f"stderr: {e.stderr}")
+```
+
+### Integration with Test Script
+
+```python
+from lager.binaries import run_custom_binary
+from lager import Net, NetType
+import time
+
+def flash_device_firmware():
+    """Flash firmware using custom programming tool."""
+
+    # Power on the device
+    psu = Net.get('VDD', type=NetType.PowerSupply)
+    psu.set_voltage(3.3)
+    psu.enable()
+    time.sleep(1)
+
+    # Run custom flashing tool
+    result = run_custom_binary(
+        'device_flasher',
+        '--port', '/dev/ttyUSB0',
+        '--firmware', '/tmp/firmware.bin',
+        '--verify',
+        timeout=120
+    )
+
+    if result.returncode == 0:
+        print("Firmware flashed successfully!")
+        return True
+    else:
+        print(f"Flash failed: {result.stderr}")
+        return False
+
+def run_device_tests():
+    """Run device-specific test tool."""
+
+    result = run_custom_binary(
+        'device_test_runner',
+        '--all',
+        '--json-output',
+        timeout=300
+    )
+
+    if result.returncode == 0:
+        import json
+        results = json.loads(result.stdout)
+        return results
+    else:
+        raise RuntimeError(f"Tests failed: {result.stderr}")
+```
+
+## Uploading Binaries
+
+Custom binaries are uploaded to the Lager Box using the CLI:
+
+```bash
+# Upload a binary to the Lager Box
+lager binaries add ./my_tool --box my-lager-box
+
+# List binaries on the Lager Box
+lager binaries list --box my-lager-box
+
+# Remove a binary
+lager binaries remove my_tool --box my-lager-box
+```
+
+## Binary Location
+
+On the Lager Box, custom binaries are stored at:
+- **Host path:** `/home/lagerdata/third_party/customer-binaries/`
+- **Container path:** `/home/www-data/customer-binaries/`
+
+The directory is mounted into the container, so binaries are immediately available after upload without rebuilding.
+
+## Notes
+
+- Binaries must be Linux x86_64 compatible (matching Lager Box architecture)
+- Binary names cannot contain path separators (`/`, `\`) or `..`
+- Binaries must be executable (set automatically during upload)
+- Default timeout is 30 seconds; use `timeout=None` for no limit
+- Use `capture_output=False` for interactive or streaming output
+- Environment variables are inherited from parent process unless `env` is specified

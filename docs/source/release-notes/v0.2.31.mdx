@@ -1,0 +1,47 @@
+---
+title: "Version 0.2.31"
+description: "December 10, 2025"
+---
+
+## <u>Features</u>
+
+### Oscilloscope Support
+- Added support for PicoScope and Rigol oscilloscopes
+- Implemented voltage measurements for oscilloscopes
+- Added cursor measurement modes and autoscale functionality
+
+## <u>Bug Fixes</u>
+
+- Fixed critical bug in Device proxy: properly handle serialized enum dictionaries
+- Fixed critical channel parameter bug when channel=None in Device proxy wrapper
+- Fixed autoscale infinite recursion bug in RigolMSO5000 mapper
+- Fixed asyncio deprecation warning in PicoScope commands
+- Fixed oscilloscope measurement channel parameter bugs
+- Fixed cursor timeout issues in oscilloscope operations
+- Fixed trigger validation in oscilloscope commands
+- Fixed mux.connect() error in oscilloscope interface
+
+## <u>Improvements</u>
+
+- Removed accidentally committed Rust build artifacts from repository
+- Added missing clear_measurement and disable_cursor_measure_mode methods to RigolMso5000
+- Improved get_measure_item error handling with better logging
+- Enhanced oscilloscope command reliability
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.2.31
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.2.31/)

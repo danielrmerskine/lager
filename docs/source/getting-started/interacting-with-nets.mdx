@@ -1,0 +1,154 @@
+---
+title: Interacting With Nets
+description: Control your instruments through the Lager Client using CLI or Lager Python
+---
+
+Nets act as named interfaces to your instruments. Once your Nets are configured, you can begin controlling those instruments using the Lager Client — via the CLI or Python SDK.
+
+The examples below demonstrate how to issue commands to common instrument types such as power supplies, battery simulators, debuggers, and communication buses.
+
+---
+
+## Setting Defaults
+
+Before diving into examples, you can set default values for `--box` and common nets to avoid repeating them on every command:
+
+```bash
+# Set a default box so you don't need --box on every command
+lager defaults add --box my-lager-box
+
+# Set default nets for common instrument types
+lager defaults add --supply-net POWER
+lager defaults add --debug-net DEBUG_NET
+lager defaults add --i2c-net I2C_0
+```
+
+With defaults set, you can run commands more concisely (e.g., `lager supply voltage 3.3` instead of `lager supply POWER voltage 3.3 --box my-lager-box`). See the [defaults reference](/source/reference/cli/defaults) for all options.
+
+---
+
+## CLI Examples
+
+### Supply Nets
+
+Power supply Nets can be controlled using the `lager supply` command.
+
+Set voltage and protection thresholds (note: this does **not** enable output):
+
+```bash
+lager supply POWER voltage 5 --ovp 5.1 --ocp 0.5 --box my-lager-box
+```
+
+<Note>
+**OVP** (Over-Voltage Protection) and **OCP** (Over-Current Protection) are safety thresholds. If the output voltage or current exceeds these limits, the supply automatically shuts off to protect your device. You can clear a tripped fault with `lager supply POWER clear-ovp` or `clear-ocp`.
+</Note>
+
+Enable the output:
+
+```bash
+lager supply POWER enable --box my-lager-box
+```
+
+Disable the output:
+
+```bash
+lager supply POWER disable --box my-lager-box
+```
+
+---
+
+### Battery Nets
+
+Some programmable power supplies support battery simulation. These can be controlled using the `lager battery` command.
+
+Set the simulated battery's state of charge (SOC):
+
+```bash
+lager battery BATT soc 50 --box my-lager-box
+```
+
+<Note>
+**SOC** (State of Charge) represents the battery's charge level as a percentage (0-100%). Setting SOC to 50 simulates a half-charged battery, which is useful for testing how your device behaves at different battery levels.
+</Note>
+
+Set max charge and discharge current:
+
+```bash
+lager battery BATT current-limit 1.0 --box my-lager-box
+```
+
+---
+
+### Debug Nets
+
+Debugger nets (e.g. J-Link) can be used to flash firmware, erase memory, and inspect devices.
+
+Flash a hex file to your device:
+
+```bash
+lager debug DEBUG_NET flash --hex firmware.hex --box my-lager-box
+```
+
+Where `DEBUG_NET` is the name of your debug net. You can also use a default debug net if configured.
+
+---
+
+### I2C and SPI Nets
+
+For communicating with peripheral devices over I2C or SPI buses:
+
+```bash
+# Scan the I2C bus for connected devices
+lager i2c I2C_0 scan --box my-lager-box
+
+# Read 2 bytes from register 0x00 on device at address 0x76
+lager i2c I2C_0 transfer 2 --address 0x76 --data 0x00 --box my-lager-box
+
+# Read a SPI device ID (send 0x9F command, read 3 response bytes)
+lager spi SPI_0 transfer --data 0x9f 4 --box my-lager-box
+```
+
+---
+
+## Programmatic Control with Python
+
+For more complex automation or integration into test frameworks, you can use the Lager Python SDK to perform the same operations programmatically.
+
+The following example shows how to write a Python script using the Net API:
+
+1.  **Create a Python script.** Save the following code to a file named `flash.py`:
+
+    ```python
+    from lager import Net, NetType
+
+    # Get a debug net by name
+    dbg = Net.get('DEBUG_NET', type=NetType.Debug)
+
+    # Reset and flash the firmware
+    dbg.reset(halt=True)
+    dbg.flash('path/to/firmware.hex')
+
+    print("Firmware flashing complete.")
+    ```
+
+2.  **Execute the script with Lager.** Use the `lager python` command to run the script in the Lager Box environment, ensuring it has access to the connected hardware.
+
+    ```bash
+    lager python flash.py --box my-lager-box
+    ```
+
+> For detailed Python API documentation, see the [Python Reference](/source/reference/python/overview) section.
+
+For a more comprehensive example combining power supply control, firmware flashing, ADC measurement, and safe cleanup, see the [demo script](https://github.com/lagerdata/lager/blob/main/docs/examples/demo_script.py).
+
+---
+
+## Next Steps
+
+You've completed the Getting Started guide. Here's where to go from here:
+
+- **[Your First Test](/source/getting-started/first-test)** -- Walk through a complete end-to-end test workflow
+- **[CLI Reference](/source/reference/cli/overview)** -- Full documentation for all CLI commands
+- **[Python API](/source/reference/python/overview)** -- Automate tests with the Python SDK
+- **[Defaults Reference](/source/reference/cli/defaults)** -- Reduce typing by setting default box and net values
+- **[Troubleshooting](/source/getting-started/troubleshooting)** -- Solutions for common issues

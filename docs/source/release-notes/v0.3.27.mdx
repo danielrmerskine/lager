@@ -1,0 +1,38 @@
+---
+title: "Version 0.3.27"
+description: "February 19, 2026"
+---
+
+## <u>Features</u>
+
+### `lager-mcp` Entry Point for MCP Server
+
+Added a `lager-mcp` console script entry point for easier MCP server setup with AI assistants:
+
+- Install with `pip install "lager-cli[mcp]"` and run with `lager-mcp`
+- Eliminates Python PATH resolution issues when configuring Claude Code, Cursor, or other AI tools
+- Setup is now a single command: `claude mcp add --transport stdio lager -- lager-mcp`
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.27
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+To install with MCP support:
+
+```bash
+pip install "lager-cli[mcp]"
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.27/)

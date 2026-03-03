@@ -1,0 +1,220 @@
+---
+title: Energy Analyzer
+description: Integrate energy and charge, and compute power statistics using Joulescope JS220
+---
+
+Integrate energy and charge over time, or compute current/voltage/power statistics, from a Joulescope JS220 energy-analyzer net. Requires the `energy-analyzer` net type.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `read_energy(duration)` | Integrate energy and charge over `duration` seconds |
+| `read_stats(duration)` | Compute mean/min/max/std for current, voltage, and power |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.EnergyAnalyzer)`
+
+Get an energy analyzer net by name.
+
+```python
+from lager import Net, NetType
+
+power = Net.get('POWER_METER', type=NetType.EnergyAnalyzer)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the energy-analyzer net |
+| `type` | `NetType` | Must be `NetType.EnergyAnalyzer` |
+
+**Returns:** Energy analyzer Net instance
+
+### `read_energy(duration)`
+
+Integrate current and power over `duration` seconds.
+
+```python
+result = power.read_energy(10.0)
+print(f"Energy: {result['energy_wh'] * 1000:.3f} mWh")
+print(f"Charge: {result['charge_ah'] * 1000:.3f} mAh")
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `duration` | `float` | Integration window in seconds |
+
+**Returns:** `dict` with keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `"energy_j"` | `float` | Energy in joules |
+| `"energy_wh"` | `float` | Energy in watt-hours |
+| `"charge_c"` | `float` | Charge in coulombs |
+| `"charge_ah"` | `float` | Charge in amp-hours |
+| `"duration_s"` | `float` | Duration that was requested |
+
+### `read_stats(duration)`
+
+Compute mean, minimum, maximum, and standard deviation for current, voltage, and power over `duration` seconds.
+
+```python
+stats = power.read_stats(1.0)
+print(f"Current: {stats['current']['mean'] * 1e6:.1f} uA (mean)")
+print(f"Voltage: {stats['voltage']['mean']:.3f} V (mean)")
+print(f"Power:   {stats['power']['mean'] * 1000:.3f} mW (mean)")
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `duration` | `float` | Measurement window in seconds |
+
+**Returns:** `dict` with keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `"current"` | `dict` | Current statistics in amps |
+| `"voltage"` | `dict` | Voltage statistics in volts |
+| `"power"` | `dict` | Power statistics in watts |
+| `"duration_s"` | `float` | Duration that was requested |
+
+Each statistics sub-dict contains:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `"mean"` | `float` | Mean value |
+| `"min"` | `float` | Minimum value |
+| `"max"` | `float` | Maximum value |
+| `"std"` | `float` | Standard deviation |
+
+## Examples
+
+### Energy Budget Check
+
+```python
+from lager import Net, NetType
+
+power = Net.get('DEVICE_POWER', type=NetType.EnergyAnalyzer)
+
+result = power.read_energy(10.0)
+
+energy_mwh = result['energy_wh'] * 1000
+charge_mah = result['charge_ah'] * 1000
+
+print(f"Energy: {energy_mwh:.3f} mWh")
+print(f"Charge: {charge_mah:.3f} mAh")
+
+if energy_mwh > 50:
+    print("FAIL: Energy consumption exceeds budget")
+else:
+    print("PASS: Energy within budget")
+```
+
+### Sleep Current Verification
+
+```python
+from lager import Net, NetType
+
+power = Net.get('DEVICE_POWER', type=NetType.EnergyAnalyzer)
+
+# Measure over 5 seconds for accuracy
+stats = power.read_stats(5.0)
+
+sleep_ua = stats['current']['mean'] * 1e6
+supply_v = stats['voltage']['mean']
+
+print(f"Sleep current: {sleep_ua:.1f} uA")
+print(f"Supply voltage: {supply_v:.3f} V")
+
+if sleep_ua < 100:
+    print("PASS: Sleep current below 100 uA")
+else:
+    print(f"FAIL: Sleep current {sleep_ua:.1f} uA exceeds 100 uA limit")
+```
+
+### Battery Life Estimation
+
+```python
+from lager import Net, NetType
+
+power = Net.get('DEVICE_POWER', type=NetType.EnergyAnalyzer)
+
+# Measure average current draw over a representative workload
+stats = power.read_stats(30.0)
+
+avg_current_ma = stats['current']['mean'] * 1000
+avg_voltage_v = stats['voltage']['mean']
+
+# Estimate from a 1000 mAh battery
+battery_mah = 1000
+hours = battery_mah / avg_current_ma if avg_current_ma > 0 else float('inf')
+
+print(f"Average current: {avg_current_ma:.3f} mA")
+print(f"Average voltage: {avg_voltage_v:.3f} V")
+print(f"Estimated battery life: {hours:.1f} hours")
+```
+
+### Startup Energy Capture
+
+```python
+from lager import Net, NetType
+
+power = Net.get('DEVICE_POWER', type=NetType.EnergyAnalyzer)
+
+# Capture energy consumed during device startup (2 seconds)
+result = power.read_energy(2.0)
+
+print(f"Startup energy: {result['energy_j'] * 1000:.2f} mJ")
+print(f"Startup charge: {result['charge_c'] * 1000:.2f} mC")
+```
+
+### Current Spike Analysis
+
+```python
+from lager import Net, NetType
+
+power = Net.get('DEVICE_POWER', type=NetType.EnergyAnalyzer)
+
+# Short window to capture peak current
+stats = power.read_stats(1.0)
+
+peak_ma = stats['current']['max'] * 1000
+avg_ma = stats['current']['mean'] * 1000
+std_ma = stats['current']['std'] * 1000
+
+print(f"Peak current:    {peak_ma:.3f} mA")
+print(f"Average current: {avg_ma:.3f} mA")
+print(f"Std deviation:   {std_ma:.3f} mA")
+
+# Flag if peak is more than 10x average (unexpected spike)
+if peak_ma > avg_ma * 10:
+    print("WARNING: Unexpected current spike detected")
+```
+
+## Supported Hardware
+
+| Manufacturer | Model | Net Type | USB VID:PID |
+|--------------|-------|----------|-------------|
+| Joulescope | JS220 | `energy-analyzer` | `16d0:10ba` |
+
+The `energy-analyzer` net type is exclusive to the Joulescope JS220. For instantaneous power readings (also available on Yocto-Watt), see [Watt Meter](/source/reference/python/watt).
+
+## Notes
+
+- The Joulescope JS220 samples at high frequency; longer durations yield more accurate statistics
+- `read_energy()` and `read_stats()` block for the full `duration` before returning
+- The same physical JS220 device is shared between `WattMeter` and `EnergyAnalyzer` net roles — opening both net types for the same device is safe
+- Use `lager instruments --box <box>` to verify the JS220 is detected before running scripts

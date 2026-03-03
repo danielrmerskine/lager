@@ -1,0 +1,388 @@
+---
+title: Power Supply
+description: Control programmable power supply nets
+---
+
+Control programmable power supplies to set voltage, current, and protection thresholds for your DUT.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `set_voltage()` | Set output voltage |
+| `set_current()` | Set output current limit |
+| `voltage()` | Read measured voltage |
+| `current()` | Read measured current |
+| `power()` | Read measured power |
+| `enable()` | Enable power output |
+| `disable()` | Disable power output |
+| `set_ovp()` | Set over-voltage protection threshold |
+| `set_ocp()` | Set over-current protection threshold |
+| `get_ovp_limit()` | Get over-voltage protection limit |
+| `get_ocp_limit()` | Get over-current protection limit |
+| `is_ovp()` | Check if OVP fault is active |
+| `is_ocp()` | Check if OCP fault is active |
+| `clear_ovp()` | Clear over-voltage protection fault |
+| `clear_ocp()` | Clear over-current protection fault |
+| `state()` | Print comprehensive power state |
+| `get_full_state()` | Print extended state with setpoints and limits |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.PowerSupply)`
+
+Get a power supply net by name.
+
+```python
+from lager import Net, NetType
+
+psu = Net.get('VDD', type=NetType.PowerSupply)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the power supply net |
+| `type` | `NetType` | Must be `NetType.PowerSupply` |
+
+**Returns:** Power supply Net instance
+
+### `set_voltage(value)`
+
+Set the output voltage.
+
+```python
+psu.set_voltage(3.3)  # Set to 3.3V
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `float` | Target voltage in volts |
+
+### `set_current(value)`
+
+Set the output current limit.
+
+```python
+psu.set_current(0.5)  # Set limit to 0.5A
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `float` | Current limit in amps |
+
+### `voltage()`
+
+Read the measured output voltage.
+
+```python
+v = psu.voltage()
+print(f"Voltage: {v}V")
+```
+
+**Returns:** `float` - Measured voltage in volts
+
+### `current()`
+
+Read the measured output current.
+
+```python
+i = psu.current()
+print(f"Current: {i}A")
+```
+
+**Returns:** `float` - Measured current in amps
+
+### `power()`
+
+Read the measured output power.
+
+```python
+p = psu.power()
+print(f"Power: {p}W")
+```
+
+**Returns:** `float` - Measured power in watts
+
+### `enable()`
+
+Enable the power output.
+
+```python
+psu.enable()
+```
+
+### `disable()`
+
+Disable the power output.
+
+```python
+psu.disable()
+```
+
+### `set_ovp(limit)`
+
+Set over-voltage protection threshold. OVP must be greater than or equal to the configured voltage. When the measured voltage exceeds this threshold, the output is automatically disabled.
+
+```python
+psu.set_ovp(3.6)  # Trip at 3.6V
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | `float` | OVP threshold in volts |
+
+### `set_ocp(limit)`
+
+Set over-current protection threshold. When the measured current exceeds this threshold, the output is automatically disabled.
+
+```python
+psu.set_ocp(1.0)  # Trip at 1.0A
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `limit` | `float` | OCP threshold in amps |
+
+### `get_ovp_limit()`
+
+Get the configured OVP limit.
+
+```python
+ovp = psu.get_ovp_limit()
+print(f"OVP limit: {ovp}V")
+```
+
+**Returns:** `float` - OVP threshold in volts
+
+### `get_ocp_limit()`
+
+Get the configured OCP limit.
+
+```python
+ocp = psu.get_ocp_limit()
+print(f"OCP limit: {ocp}A")
+```
+
+**Returns:** `float` - OCP threshold in amps
+
+### `is_ovp()`
+
+Check if an over-voltage fault is active.
+
+```python
+if psu.is_ovp():
+    print("OVP fault detected!")
+```
+
+**Returns:** `bool` - True if OVP fault is active
+
+### `is_ocp()`
+
+Check if an over-current fault is active.
+
+```python
+if psu.is_ocp():
+    print("OCP fault detected!")
+```
+
+**Returns:** `bool` - True if OCP fault is active
+
+### `clear_ovp()`
+
+Clear over-voltage protection fault.
+
+```python
+psu.clear_ovp()
+```
+
+### `clear_ocp()`
+
+Clear over-current protection fault.
+
+```python
+psu.clear_ocp()
+```
+
+### `state()`
+
+Print comprehensive power supply state including channel, enabled status, mode (CV/CC), measured voltage/current/power, and protection status.
+
+```python
+psu.state()
+```
+
+**Example output:**
+
+```
+Channel: CH1
+Enabled: ON
+Mode: CV
+Voltage: 3.3000
+Current: 0.1520
+Power: 0.5016
+OCP Limit: 1.0000
+    OCP Tripped: NO
+OVP Limit: 3.6000
+    OVP Tripped: NO
+```
+
+### `get_full_state()`
+
+Print extended state including all measurements, configured setpoints, protection limits, and hardware maximum ratings.
+
+```python
+psu.get_full_state()
+```
+
+**Example output:**
+
+```
+Channel: CH1
+Enabled: ON
+Mode: CV
+Voltage: 3.3000
+Current: 0.1520
+Power: 0.5016
+Voltage_Set: 3.3000
+Current_Set: 1.0000
+OCP Limit: 1.0000
+    OCP Tripped: NO
+OVP Limit: 3.6000
+    OVP Tripped: NO
+Voltage_Max: 30.0000
+Current_Max: 3.0000
+```
+
+Additional fields beyond `state()`:
+- **Voltage_Set / Current_Set** - Configured setpoints
+- **Voltage_Max / Current_Max** - Hardware channel ratings
+
+## Examples
+
+### Basic Power Control
+
+```python
+from lager import Net, NetType
+
+# Get power supply net
+psu = Net.get('VDD', type=NetType.PowerSupply)
+
+# Configure output
+psu.set_voltage(3.3)
+psu.set_current(0.5)
+
+# Enable output
+psu.enable()
+
+# Read measurements
+print(f"Voltage: {psu.voltage():.2f}V")
+print(f"Current: {psu.current():.3f}A")
+print(f"Power: {psu.power():.3f}W")
+
+# Disable when done
+psu.disable()
+```
+
+### With Protection Thresholds
+
+```python
+from lager import Net, NetType
+import time
+
+psu = Net.get('VDD', type=NetType.PowerSupply)
+
+# Configure voltage/current
+psu.set_voltage(5.0)
+psu.set_current(0.5)
+
+# Set protection thresholds
+psu.set_ovp(5.5)  # Trip at 5.5V
+psu.set_ocp(0.6)  # Trip at 0.6A
+
+# Enable output
+psu.enable()
+print("Power enabled")
+
+# Monitor for faults
+time.sleep(1)
+if psu.is_ocp():
+    print("OCP fault! Clearing...")
+    psu.clear_ocp()
+
+if psu.is_ovp():
+    print("OVP fault! Clearing...")
+    psu.clear_ovp()
+
+# Clean up
+psu.disable()
+```
+
+### Monitor Power Consumption
+
+```python
+from lager import Net, NetType
+import time
+
+psu = Net.get('VDD', type=NetType.PowerSupply)
+psu.set_voltage(3.3)
+psu.set_current(1.0)
+psu.enable()
+
+# Log power consumption
+for sample in range(10):
+    v = psu.voltage()
+    i = psu.current()
+    p = psu.power()
+    print(f"V={v:.2f}V, I={i:.3f}A, P={p:.3f}W")
+    time.sleep(1)
+
+psu.disable()
+```
+
+### Full State Inspection
+
+```python
+from lager import Net, NetType
+
+psu = Net.get('VDD', type=NetType.PowerSupply)
+psu.set_voltage(3.3)
+psu.set_ovp(3.6)
+psu.set_ocp(0.5)
+psu.enable()
+
+# Print comprehensive state
+psu.get_full_state()
+
+psu.disable()
+```
+
+## Supported Hardware
+
+| Manufacturer | Model Series | Channels | Features |
+|--------------|-------------|----------|----------|
+| Rigol | DP832 / DP832A | 3 | Ch1-2: 30V/3A, Ch3: 5V/3A |
+| Rigol | DP821 | 2 | Ch1: 60V/1A, Ch2: 8V/10A |
+| Rigol | DP811 / DP811A | 1 | 20V/10A or 40V/5A |
+| Keithley | 2281S | 1 | 20V/6A/120W, battery simulator mode |
+| Keysight | E36200 series | 2 | E36233A: 30V/20A per channel |
+| Keysight | E36300 series | 3 | E36311A/12A/13A |
+| EA | PSI/EL series | 1 | Two-quadrant operation |
+
+## Notes
+
+- Net must be configured as `NetType.PowerSupply`
+- Call `enable()` to turn on the output after setting voltage/current
+- Always call `disable()` when finished
+- Protection faults automatically disable output; use `clear_ovp()` or `clear_ocp()` after addressing the fault
+- OVP must be >= the voltage setpoint; setting a lower OVP will raise an error
+- Voltage and current limits depend on hardware capabilities
+- Multi-channel supplies: each channel is configured as a separate net
+- `state()` and `get_full_state()` print to stdout; use `voltage()`, `current()`, `power()` to get values in code

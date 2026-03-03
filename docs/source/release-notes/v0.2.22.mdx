@@ -1,0 +1,41 @@
+---
+title: "Version 0.2.22"
+description: "December 2, 2025"
+---
+
+## <u>Features</u>
+
+### Hardware Invocation Service
+- Added hardware invocation service for Device proxy pattern
+- Enabled remote device method calls through proxy interface
+- Improved hardware abstraction layer
+
+### Keysight Python Support
+- Added Keysight power supply support to `lager python` scripts
+- Enhanced Python script execution with Keysight devices
+
+## <u>Bug Fixes</u>
+
+- Fixed hardware service to extract low-level device from SupplyNet wrappers
+- Fixed hardware service: added import paths for supply/battery/eload modules
+- Fixed hardware service: handle unhashable types in net_info cache key
+- Fixed PowerSupply Net initialization in get_from_saved_json
+- Fixed Net class: changed self.net.channel to self.channel
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.2.22
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.2.22/)

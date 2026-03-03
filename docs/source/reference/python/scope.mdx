@@ -1,0 +1,393 @@
+---
+title: Oscilloscope
+description: Python SDK for oscilloscope control
+---
+
+The oscilloscope module provides Python interfaces for waveform capture, triggering, and measurements.
+
+## Overview
+
+Use the scope module to control oscilloscopes for analog signal capture, triggering on specific events, and automated measurements.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Usage
+
+```python
+from lager import Net, NetType
+
+# Get scope net
+scope = Net.get('ANALOG1', type=NetType.Analog)
+
+# Enable the channel
+scope.enable()
+
+# Start capture
+scope.start_capture()
+
+# Take measurements
+freq = scope.measurement.frequency()
+period = scope.measurement.period()
+
+# Stop and disable
+scope.stop_capture()
+scope.disable()
+```
+
+## Methods
+
+### Channel Control
+
+#### `enable()`
+
+Enable the oscilloscope channel.
+
+```python
+scope.enable()
+```
+
+#### `disable()`
+
+Disable the oscilloscope channel.
+
+```python
+scope.disable()
+```
+
+### Capture Control
+
+#### `start_capture()`
+
+Start continuous waveform capture.
+
+```python
+scope.start_capture()
+```
+
+#### `start_single_capture()`
+
+Start single-shot capture (captures one triggered event).
+
+```python
+scope.start_single_capture()
+```
+
+#### `stop_capture()`
+
+Stop waveform capture.
+
+```python
+scope.stop_capture()
+```
+
+### Measurements
+
+Access comprehensive measurements through the `measurement` attribute:
+
+#### Voltage Measurements
+
+```python
+# Basic voltage
+vmax = scope.measurement.voltage_max()      # Maximum voltage
+vmin = scope.measurement.voltage_min()      # Minimum voltage
+vpp = scope.measurement.voltage_peak_to_peak()  # Peak-to-peak
+vavg = scope.measurement.voltage_average()  # Average voltage
+vrms = scope.measurement.voltage_rms()      # RMS voltage
+
+# Waveform characteristics
+vtop = scope.measurement.voltage_flat_top()    # Flat top voltage
+vbase = scope.measurement.voltage_flat_base()  # Flat base voltage
+vamp = scope.measurement.voltage_flat_amplitude()  # Amplitude
+
+# Thresholds
+vupper = scope.measurement.voltage_threshold_upper()
+vlower = scope.measurement.voltage_threshold_lower()
+vmid = scope.measurement.voltage_threshold_mid()
+
+# Signal quality
+overshoot = scope.measurement.voltage_overshoot()
+preshoot = scope.measurement.voltage_preshoot()
+```
+
+#### Timing Measurements
+
+```python
+# Frequency and period
+freq = scope.measurement.frequency()
+period = scope.measurement.period()
+
+# Rise and fall times
+rise = scope.measurement.rise_time()
+fall = scope.measurement.fall_time()
+
+# Pulse widths
+pos_width = scope.measurement.pulse_width_positive()
+neg_width = scope.measurement.pulse_width_negative()
+
+# Duty cycles
+pos_duty = scope.measurement.duty_cycle_positive()
+neg_duty = scope.measurement.duty_cycle_negative()
+
+# Time at voltage extremes
+t_vmax = scope.measurement.time_at_voltage_max()
+t_vmin = scope.measurement.time_at_voltage_min()
+
+# Slew rates
+pos_slew = scope.measurement.positive_slew_rate()
+neg_slew = scope.measurement.negative_slew_rate()
+```
+
+#### Counting Measurements
+
+```python
+# Edge counts
+pos_edges = scope.measurement.positive_edge_count()
+neg_edges = scope.measurement.negative_edge_count()
+
+# Pulse counts
+pos_pulses = scope.measurement.positive_pulse_count()
+neg_pulses = scope.measurement.negative_pulse_count()
+```
+
+#### Area Measurements
+
+```python
+area = scope.measurement.waveform_area()
+period_area = scope.measurement.waveform_period_area()
+```
+
+#### Statistical Measurements
+
+```python
+variance = scope.measurement.variance()
+pvrms = scope.measurement.voltage_rms_period()  # Period RMS voltage
+```
+
+#### Delay and Phase Measurements
+
+```python
+# Delay measurements (between channels)
+rr_delay = scope.measurement.delay_rising_rising_edge()
+rf_delay = scope.measurement.delay_rising_falling_edge()
+fr_delay = scope.measurement.delay_falling_rising_edge()
+ff_delay = scope.measurement.delay_falling_falling_edge()
+
+# Phase measurements
+rr_phase = scope.measurement.phase_rising_rising_edge()
+rf_phase = scope.measurement.phase_rising_falling_edge()
+fr_phase = scope.measurement.phase_falling_rising_edge()
+ff_phase = scope.measurement.phase_falling_falling_edge()
+```
+
+#### Measurement Options
+
+Most measurements accept optional parameters:
+
+```python
+# Keep measurement displayed on scope
+freq = scope.measurement.frequency(display=True)
+
+# Enable cursor measurement mode
+vpp = scope.measurement.voltage_peak_to_peak(measurement_cursor=True)
+```
+
+## Streaming (PicoScope)
+
+For PicoScope devices, streaming capabilities are available:
+
+### `stream_start(channel, volts_per_div, time_per_div, trigger_level, trigger_slope, capture_mode, coupling)`
+
+Start streaming acquisition.
+
+**Parameters:**
+- `channel` (str): Channel to enable - `"A"`, `"B"`, `"1"`, `"2"`
+- `volts_per_div` (float): Vertical scale
+- `time_per_div` (float): Horizontal scale in seconds
+- `trigger_level` (float): Trigger level in volts
+- `trigger_slope` (str): `"rising"`, `"falling"`, `"either"`
+- `capture_mode` (str): `"auto"`, `"normal"`, `"single"`
+- `coupling` (str): `"dc"`, `"ac"`
+
+```python
+scope.stream_start(
+    channel="A",
+    volts_per_div=1.0,
+    time_per_div=0.001,
+    trigger_level=0.5,
+    trigger_slope="rising",
+    capture_mode="auto",
+    coupling="dc"
+)
+```
+
+### `stream_stop()`
+
+Stop streaming acquisition.
+
+```python
+scope.stream_stop()
+```
+
+### `stream_capture(output, duration, samples)`
+
+Capture data to file.
+
+**Parameters:**
+- `output` (str): Output file path
+- `duration` (float): Capture duration in seconds
+- `samples` (int): Number of samples (optional)
+
+```python
+scope.stream_capture(
+    output="waveform.csv",
+    duration=5.0
+)
+```
+
+## Complete Example
+
+```python
+from lager import Net, NetType
+import time
+
+def measure_pwm_signal():
+    """Measure PWM signal characteristics."""
+
+    # Get scope net
+    pwm_net = Net.get('PWM_OUTPUT', type=NetType.Analog)
+
+    try:
+        # Enable channel
+        pwm_net.enable()
+
+        # Configure trigger
+        pwm_net.trigger_settings.set_mode_normal()
+        pwm_net.trigger_settings.set_coupling_DC()
+        pwm_net.trigger_settings.edge.set_source(pwm_net)
+        pwm_net.trigger_settings.edge.set_slope_rising()
+        pwm_net.trigger_settings.edge.set_level(1.65)  # 50% of 3.3V
+
+        # Start capture
+        pwm_net.start_capture()
+        time.sleep(0.5)  # Wait for stable capture
+
+        # Take measurements
+        frequency = pwm_net.measurement.frequency()
+        period = pwm_net.measurement.period()
+
+        print(f"PWM Frequency: {frequency:.2f} Hz")
+        print(f"PWM Period: {period*1000:.3f} ms")
+
+        # Calculate duty cycle from pulse width if available
+        # ...
+
+    finally:
+        pwm_net.stop_capture()
+        pwm_net.disable()
+
+if __name__ == "__main__":
+    measure_pwm_signal()
+```
+
+### Trace Settings
+
+Configure vertical and horizontal scale through `trace_settings`:
+
+```python
+# Vertical scale (V/div)
+scope.trace_settings.set_volts_per_div(1.0)
+volts = scope.trace_settings.get_volts_per_div()
+
+# Vertical offset
+scope.trace_settings.set_volt_offset(0.5)
+offset = scope.trace_settings.get_volt_offset()
+
+# Horizontal scale (s/div)
+scope.trace_settings.set_time_per_div(0.001)  # 1ms/div
+time_scale = scope.trace_settings.get_time_per_div()
+
+# Horizontal offset
+scope.trace_settings.set_time_offset(0.0)
+time_offset = scope.trace_settings.get_time_offset()
+```
+
+### Advanced Trigger Settings
+
+Access advanced trigger configuration through `trigger_settings`:
+
+```python
+# Trigger mode
+scope.trigger_settings.set_mode_auto()
+scope.trigger_settings.set_mode_normal()
+scope.trigger_settings.set_mode_single()
+mode = scope.trigger_settings.get_mode()
+
+# Trigger coupling
+scope.trigger_settings.set_coupling_DC()
+scope.trigger_settings.set_coupling_AC()
+scope.trigger_settings.set_coupling_low_freq_reject()
+scope.trigger_settings.set_coupling_high_freq_reject()
+coupling = scope.trigger_settings.get_coupling()
+
+# Edge trigger settings
+scope.trigger_settings.edge.set_source(scope)
+scope.trigger_settings.edge.set_slope_rising()
+scope.trigger_settings.edge.set_slope_falling()
+scope.trigger_settings.edge.set_slope_both()
+scope.trigger_settings.edge.set_level(1.65)
+
+# Get status
+status = scope.trigger_settings.get_status()
+```
+
+### Cursor Control
+
+Access cursor functions through the `cursor` attribute:
+
+```python
+# Set cursor positions
+scope.cursor.set_a(x=100, y=50)
+scope.cursor.set_b(x=200, y=50)
+
+# Get cursor positions
+ax, ay = scope.cursor.get_a()
+bx, by = scope.cursor.get_b()
+
+# Move cursors relatively
+scope.cursor.move_a(x_del=10, y_del=5)
+scope.cursor.move_b(x_del=-10, y_del=0)
+
+# Read cursor measurements
+x_delta = scope.cursor.x_delta()  # Time difference
+y_delta = scope.cursor.y_delta()  # Voltage difference
+inv_x = scope.cursor.frequency()  # Frequency
+
+# Get individual values
+ax_val = scope.cursor.a_x()
+ay_val = scope.cursor.a_y()
+bx_val = scope.cursor.b_x()
+by_val = scope.cursor.b_y()
+
+# Hide cursor
+scope.cursor.hide()
+```
+
+## Supported Hardware
+
+| Manufacturer | Model Series | Features |
+|--------------|--------------|----------|
+| Rigol | MSO5000 | Multi-channel, mixed-signal, protocol decode |
+| PicoScope | Various | Streaming support |
+
+## Notes
+
+- Use `NetType.Analog` for oscilloscope channels (1-4)
+- Use `NetType.Logic` for digital channels (D0-D15) on MSO scopes
+- Streaming features are only available on PicoScope devices
+- Configure trigger before starting capture for reliable measurements
+- Measurement methods return `float` on success, or `None` if the measurement is invalid (e.g., no signal, no trigger, wrong channel). On Rigol hardware, the instrument returns 9.9E+37 for invalid measurements, which is automatically converted to `None`.
+- For protocol triggering (UART, I2C, SPI, CAN), see the [Logic Analyzer](./logic) documentation

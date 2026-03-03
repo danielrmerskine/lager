@@ -1,0 +1,38 @@
+---
+title: "Version 0.3.11"
+description: "January 15, 2026"
+---
+
+## <u>Bug Fixes</u>
+
+### Supply TUI Force-Close Lock Release
+- Fixed VISA resource lock not being released when terminal window is force-closed
+- Added `on_unmount()` lifecycle hook to ensure WebSocket cleanup on any exit
+- Prevents "Resource busy" errors after ungraceful TUI termination
+
+### Keysight Power Supply Output State
+- Fixed bug where changing voltage on Keysight E36200 power supplies would disable the output
+- Removed unnecessary `disable_output()` call from driver initialization
+- Output state is now preserved when changing voltage or current setpoints
+
+### Voltage/Current Command Feedback
+- Fixed missing confirmation output for `lager supply voltage` and `lager supply current` commands
+- Commands now display "[OK] Voltage set to X.XV" or "[OK] Current set to X.XA" on success
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.11
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.11/)

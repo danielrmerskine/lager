@@ -1,0 +1,167 @@
+---
+title: BLE
+description: Scan and connect to Bluetooth Low Energy devices
+---
+
+Scan for and interact with Bluetooth Low Energy (BLE) devices through the Lager CLI.
+
+## Syntax
+
+```bash
+lager ble COMMAND [OPTIONS]
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `scan` | Scan for BLE devices |
+| `info` | Get BLE device information |
+| `connect` | Connect to a BLE device |
+| `disconnect` | Disconnect from a BLE device |
+
+## Command Reference
+
+### `scan`
+
+Scan for nearby BLE devices.
+
+```bash
+lager ble scan [OPTIONS]
+```
+
+**Options:**
+- `--box BOX` - Lagerbox name or IP address
+- `--timeout FLOAT` - Scan duration in seconds (default: 5.0)
+- `--name-contains STRING` - Filter devices by name (partial match)
+- `--name-exact STRING` - Filter devices by exact name match
+- `--verbose` - Include UUIDs in output
+
+**Examples:**
+```bash
+# Scan for 5 seconds (default)
+lager ble scan --box my-lager-box
+
+# Scan for 10 seconds
+lager ble scan --timeout 10
+
+# Filter by name
+lager ble scan --name-contains "Sensor"
+
+# Verbose output with UUIDs
+lager ble scan --verbose
+```
+
+### `info`
+
+Get detailed information about a BLE device.
+
+```bash
+lager ble info ADDRESS [--box BOX]
+```
+
+**Arguments:**
+- `ADDRESS` - BLE device address (e.g., `AA:BB:CC:DD:EE:FF`)
+
+Returns device information including:
+- Device name
+- Services and characteristics
+- Manufacturer data
+
+### `connect`
+
+Connect to a BLE device.
+
+```bash
+lager ble connect ADDRESS [--box BOX]
+```
+
+**Arguments:**
+- `ADDRESS` - BLE device address to connect to
+
+### `disconnect`
+
+Disconnect from a BLE device.
+
+```bash
+lager ble disconnect ADDRESS [--box BOX]
+```
+
+**Arguments:**
+- `ADDRESS` - BLE device address to disconnect from
+
+---
+
+## Examples
+
+```bash
+# Scan for BLE devices
+lager ble scan --box my-lager-box
+
+# Scan with filtering
+lager ble scan --name-contains "Nordic" --timeout 15
+
+# Get device info
+lager ble info AA:BB:CC:DD:EE:FF
+
+# Connect to device
+lager ble connect AA:BB:CC:DD:EE:FF
+
+# Disconnect
+lager ble disconnect AA:BB:CC:DD:EE:FF
+```
+
+---
+
+## Output Format
+
+### Scan Results
+
+The scan command returns a table with:
+- Device address (MAC address format)
+- Device name (if advertised)
+- RSSI (signal strength in dBm)
+- Manufacturer data (if available)
+
+### Device Info
+
+The info command shows:
+- Complete device name
+- All advertised services (UUIDs)
+- Characteristics for each service
+- Read/write/notify properties
+
+---
+
+## Use Cases
+
+### Device Discovery
+
+Use BLE scanning to discover devices for testing:
+```bash
+# Find all devices
+lager ble scan --timeout 10
+
+# Find specific device type
+lager ble scan --name-contains "Heart Rate"
+```
+
+### Automated Testing
+
+Integrate BLE operations into test scripts:
+```bash
+# Verify device is discoverable
+lager ble scan --name-exact "MyProduct" --timeout 5
+
+# Connect and verify services
+lager ble info AA:BB:CC:DD:EE:FF
+```
+
+---
+
+## Notes
+
+- BLE scanning requires Bluetooth hardware on the box
+- Address format is `XX:XX:XX:XX:XX:XX` (colon-separated hex)
+- Scan timeout affects how long the box searches for devices
+- Some devices may not advertise their name until connected

@@ -1,0 +1,69 @@
+---
+title: An Introduction to Lager
+description: Learn how Lager adds efficiency to embedded development and hardware testing.
+---
+
+**Lager** is a hardware testing platform that lets you remotely control lab equipment and debug embedded devices from your laptop. Think of it as your lab bench, accessible from anywhere via simple command-line commands.
+
+The tool significantly increases efficiency by replacing manual probing and handwritten test procedures with scriptable, reproducible workflows that integrate directly into your development cycle.
+
+---
+
+## How Lager Works
+
+Lager creates a **remote lab** with three components:
+
+```
+Your Laptop  →  Lager Box  →  Lab Equipment + Device Under Test
+```
+
+### 1. Lager Box
+
+The **Lager Box** is a compact, mini-computer that sits in your lab, physically connected to your test equipment and Device Under Test (DUT).
+
+Once connected to your lab instruments and your DUT, your Lager Box replaces your need to physically be in your lab by creating a virtual interface that you can interact with from anywhere as long as you have network access.
+
+### 2. Lager CLI & Python Library
+
+To interact with a Lager Box, you'll need the **Lager CLI** - a command-line tool you install on your personal computer. It allows you to create a personalized environment to more effectively interact with your instruments and DUT as if they were physically with you.
+
+You can use the CLI interactively from the terminal or automate entire test suites with the **Lager Python library**.
+
+Common workflows:
+- Flash and debug embedded devices
+- Control power supplies, battery simulators, and electronic loads
+- Monitor serial/UART output with interactive test runners
+- Capture oscilloscope waveforms and logic analyzer traces
+- Communicate with devices over I2C and SPI buses
+- Automate full regression test suites
+
+The CLI also includes **Lager Terminal**, an interactive REPL with tab completion and command history. Run `lager terminal` or just `lager` with no arguments to launch it.
+
+### 3. Lab Equipment & Devices
+
+The Lager Box supports a wide range of professional test equipment that you connect with:
+- Power supplies, battery simulators, and electronic loads
+- Debug probes (J-Link, CMSIS-DAP, ST-Link)
+- Oscilloscopes and logic analyzers
+- ADC/DAC/GPIO modules (LabJack T7, MCC USB-202)
+- I2C/SPI adapters (Total Phase Aardvark, LabJack T7)
+- Power meters (Yocto-Watt, Joulescope JS220)
+- And more (see full list below)
+
+---
+
+## Lager Nets
+
+In order to interact with your test environment using a Lager Box, the Lager Box must be configured with an assortment of **Nets**.
+Each Net corresponds to a specific instrument, channel of an instrument, serial port, or other interface that you may want to interact with using your Lager Box.
+
+For example, you might have your DUT powered by channel 1 of a power supply. You'd then be able to create a Power Supply Net called `DUT_POWER` which maps to that power supply's first channel
+and allows you to toggle on/off your DUT or perform any other function that power supply supports.
+
+---
+
+## Next Steps
+
+Ready to get started? Install the CLI and connect to your first box:
+
+- **[Adding your First Lager Box](/source/getting-started/adding-first-lager-box)** -- Install the CLI and verify connectivity

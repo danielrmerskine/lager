@@ -1,0 +1,208 @@
+---
+title: Troubleshooting
+description: Solutions for common Lager issues
+---
+
+This page covers the most common issues you may encounter when using Lager, organized by category. Each section includes the error or symptom, the likely cause, and the fix.
+
+---
+
+## Connection Issues
+
+<Accordion title="lager hello fails with 'No route to host'">
+
+**Cause:** Your computer cannot reach the Lager Box on the network.
+
+**Fix:**
+1. Verify your VPN is connected: run `tailscale status` and confirm your Lager Box appears in the list.
+2. Check the IP address is correct: run `lager boxes` to see your saved box IPs.
+3. If using Tailscale, try `ping <box-ip>` to verify network connectivity.
+4. Ensure the Lager Box is powered on and connected to the network.
+
+</Accordion>
+
+<Accordion title="lager hello fails with 'Connection refused'">
+
+**Cause:** The network path to the box works, but the Lager service on the box is not running.
+
+**Fix:**
+1. The Docker container on the box may have stopped. Contact your administrator to restart it.
+2. Run `lager hello --box <box>` to check the box's service status.
+3. If you have SSH access, connect to the box and check Docker: `docker ps | grep lager`.
+
+</Accordion>
+
+<Accordion title="lager hello fails with 'Connection timed out'">
+
+**Cause:** The network request is being sent but not reaching the box, often due to a firewall or incorrect IP.
+
+**Fix:**
+1. Double-check the IP address with `lager boxes`.
+2. If the box was recently moved or reprovisioned, its IP may have changed. Check your Tailscale admin panel or router DHCP table.
+3. Try pinging the box: `ping <box-ip>`.
+
+</Accordion>
+
+<Accordion title="Box was working but is now unreachable">
+
+**Cause:** The box may have lost power, network connectivity, or had its IP address change.
+
+**Fix:**
+1. Verify the box is powered on.
+2. Check your VPN connection: `tailscale status`.
+3. If the box IP changed, update it: `lager boxes edit --name my-box --ip <new-ip>`.
+4. Run `lager hello --box <name>` to check box status.
+
+</Accordion>
+
+---
+
+## Instrument Detection
+
+<Accordion title="lager instruments returns an empty list">
+
+**Cause:** No instruments are detected on the box's USB ports.
+
+**Fix:**
+1. Verify instruments are physically connected via USB to the Lager Box (not to your laptop).
+2. Check that USB cables are properly seated -- try a different cable or port.
+3. Ensure the Docker container is running with USB passthrough. Run `lager hello --box <box>`.
+4. Run `lager update --box <box>` to install the latest udev rules and drivers.
+
+</Accordion>
+
+<Accordion title="A specific instrument is missing from the list">
+
+**Cause:** The instrument may not be recognized, may be using a different USB port, or may need updated drivers.
+
+**Fix:**
+1. Unplug and replug the instrument's USB cable.
+2. Run `lager update --box <box>` to ensure udev rules are current.
+3. Check that the instrument is powered on (some instruments need external power in addition to USB).
+4. Verify the instrument model is [supported](/source/supported-instruments/supported-instruments).
+
+</Accordion>
+
+<Accordion title="'Resource busy' error when using an instrument">
+
+**Cause:** Another process (such as a TUI session or another CLI command) is actively using the instrument's USB connection.
+
+**Fix:**
+1. Close any running TUI sessions (press `q` to exit).
+2. Wait a moment and retry -- the previous command may still be completing.
+3. If the issue persists, the instrument handle may be stuck. Run `lager update --box <box>` to restart the service.
+
+</Accordion>
+
+---
+
+## Power Supply Issues
+
+<Accordion title="OVP or OCP tripped (output disabled unexpectedly)">
+
+**Cause:** The output voltage or current exceeded the protection threshold you set, so the supply shut off to protect your device.
+
+**Fix:**
+1. Check the current state: `lager supply <NET> state --box <box>`.
+2. Clear the fault: `lager supply <NET> clear-ovp` or `lager supply <NET> clear-ocp`.
+3. Adjust your protection thresholds if they are too tight, or investigate why the output exceeded the limit.
+4. Re-enable the output: `lager supply <NET> enable --box <box>`.
+
+</Accordion>
+
+<Accordion title="Voltage reads 0V when the supply is enabled">
+
+**Cause:** The supply output may not actually be enabled, or the load may be pulling the voltage down.
+
+**Fix:**
+1. Verify the output is enabled: `lager supply <NET> state --box <box>` -- check that "Enabled" shows ON.
+2. Confirm you set both the voltage and enabled the output (setting voltage alone does not enable it):
+   ```bash
+   lager supply <NET> voltage 3.3 --yes --box <box>
+   lager supply <NET> enable --yes --box <box>
+   ```
+3. Check if OVP/OCP tripped (see above).
+
+</Accordion>
+
+---
+
+## Debug / Flash Issues
+
+<Accordion title="'No target detected' when flashing">
+
+**Cause:** The debug probe cannot communicate with the target MCU.
+
+**Fix:**
+1. Verify the SWD/JTAG wiring between the debug probe and your DUT.
+2. Ensure the DUT is powered (the debug probe does not always supply power).
+3. Check that the MCU type in the debug net matches your actual device: `lager debug <NET> status --box <box>`.
+4. Try a lower SWD speed: `lager debug <NET> gdbserver --speed 100 --box <box>`.
+
+</Accordion>
+
+<Accordion title="'GDB server failed to start'">
+
+**Cause:** The J-Link or pyOCD process may be stuck from a previous session.
+
+**Fix:**
+1. Disconnect any existing session: `lager debug <NET> disconnect --box <box>`.
+2. Retry: `lager debug <NET> gdbserver --box <box>`.
+3. Check the debug probe health: `lager debug <NET> health --verbose --box <box>`.
+
+</Accordion>
+
+---
+
+## Python Script Issues
+
+<Accordion title="ImportError: No module named 'lager'">
+
+**Cause:** You are running the script directly with `python` instead of using `lager python`.
+
+**Fix:** The `lager` Python library is only available inside the Lager Box environment. Always run scripts with:
+```bash
+lager python my_script.py --box my-lager-box
+```
+
+Do **not** run `python my_script.py` directly on your laptop.
+
+</Accordion>
+
+<Accordion title="InvalidNetError: Net 'XYZ' not found">
+
+**Cause:** The net name in your script does not match any net configured on the box.
+
+**Fix:**
+1. List available nets: `lager nets --box <box>`.
+2. Check for typos in the net name. Net names are case-sensitive.
+3. If the net doesn't exist, create it using `lager nets tui --box <box>`.
+
+</Accordion>
+
+<Accordion title="Script runs but produces no output">
+
+**Cause:** The script may be failing silently, or output may not be flushed.
+
+**Fix:**
+1. Add `print()` statements to confirm the script is executing.
+2. Wrap your code in try/except to catch errors:
+   ```python
+   try:
+       # your code here
+   except Exception as e:
+       print(f"Error: {e}")
+   ```
+3. Check stderr output -- errors from the box are shown in red in the terminal.
+
+</Accordion>
+
+---
+
+## Getting More Help
+
+If the solutions above don't resolve your issue:
+
+1. **Check box logs:** `lager logs --box <box>` shows recent log output from the box's Docker container.
+2. **Check box status:** `lager hello --box <box>` verifies the box is online and responsive.
+3. **Open an issue:** Report problems on [GitHub](https://github.com/lagerdata/lager/issues) with your box name, the command you ran, and the error output.

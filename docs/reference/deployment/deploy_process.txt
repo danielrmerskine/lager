@@ -1,0 +1,302 @@
+================================================================================
+                    LAGER BOX DEPLOYMENT GUIDE
+================================================================================
+
+This guide walks you through deploying a new Lager Box from scratch.
+
+
+================================================================================
+PREREQUISITES
+================================================================================
+
+Before starting, ensure you have:
+
+  [ ] New box hardware (Ubuntu-compatible PC)
+  [ ] Ethernet cable (REQUIRED during installation)
+  [ ] Monitor and keyboard (for initial boot, optional if headless)
+  [ ] Two USB drives (one for Ubuntu installer, one for configuration)
+  [ ] Access to your local network router (to find the box's IP)
+  [ ] Tailscale account with admin access
+
+Materials needed (one-time preparation):
+  - USB 1: Ubuntu Server 22.04 installer
+  - USB 2: Cloud-init configuration (CIDATA)
+
+
+================================================================================
+PART 1: PREPARE USB DRIVES (One-Time Setup)
+================================================================================
+
+You only need to do this once. The same USB drives can be reused for multiple
+boxes.
+
+USB 1 - UBUNTU SERVER INSTALLER
+-------------------------------
+1. Download Ubuntu Server 22.04 LTS:
+   https://ubuntu.com/download/server
+
+2. Flash the ISO to a USB drive using balenaEtcher:
+   https://www.balena.io/etcher/
+
+3. Label this drive "UBUNTU" (optional, for identification)
+
+
+USB 2 - CLOUD-INIT CONFIGURATION (CIDATA)
+-----------------------------------------
+1. Format a USB drive as FAT32
+
+2. Label the drive as "CIDATA" (this exact name is required)
+
+3. Customize the user-data file before copying:
+
+   a) Generate a password hash (on macOS):
+      openssl passwd -6 YOUR_PASSWORD
+
+      On Linux:
+      mkpasswd --method=SHA-512 YOUR_PASSWORD
+
+   b) Get a Tailscale auth key:
+      - Go to: https://login.tailscale.com/admin/settings/keys
+      - Click "Generate auth key"
+      - Select "Reusable" (NOT ephemeral)
+      - Copy the key (starts with tskey-auth-...)
+
+   c) Edit docs/reference/deployment/cloud-init/user-data:
+      - Line ~22: Replace the password placeholder with your hash
+      - Line ~54: Replace YOUR_TAILSCALE_AUTH_KEY with your key
+
+4. Copy files to the USB drive:
+   cp docs/reference/deployment/cloud-init/user-data /Volumes/CIDATA/
+   touch /Volumes/CIDATA/meta-data
+
+   The meta-data file must exist but can be empty.
+
+
+================================================================================
+PART 2: INSTALL UBUNTU ON THE BOX
+================================================================================
+
+1. Connect ethernet cable to the box
+   *** THIS IS REQUIRED - installation will fail without network ***
+
+2. Insert USB 1 (Ubuntu installer) into the box
+
+3. Power on and boot from USB
+   - You may need to press F12, F2, or Del to access boot menu
+   - Select the USB drive to boot from
+
+4. Let Ubuntu install automatically
+   - The autoinstall process takes approximately 5-10 minutes
+   - When prompted, insert USB 2 (CIDATA)
+
+5. Wait for installation to complete
+   - The box will reboot automatically when done
+   - Remove the USB drives after reboot
+
+6. Verify the box is running
+   - You should see a login prompt
+   - Default credentials:
+       Username: lagerdata
+       Password: <your-password>
+       Hostname: NEW-BOX
+
+
+================================================================================
+PART 3: FIND THE BOX ON TAILSCALE
+================================================================================
+
+The box automatically joins Tailscale as "new-box" during installation.
+
+1. Find the box in Tailscale:
+   tailscale status | grep new-box
+
+   Or check the Tailscale admin console:
+   https://login.tailscale.com/admin/machines
+
+2. Note the Tailscale IP (e.g., 100.x.x.x)
+
+
+================================================================================
+PART 4: NAME THE BOX
+================================================================================
+
+1. SSH into the box using the Tailscale IP:
+   ssh lagerdata@<tailscale-ip>
+   # Password: <your-password>
+
+2. You will be automatically prompted to name the box:
+
+   =========================================
+     Welcome to your new Lager Box!
+   =========================================
+
+   Current hostname: NEW-BOX
+
+   Enter a name for this Lager Box (e.g., MY-BOX): _
+
+3. Enter a meaningful name (e.g., MY-BOX, LAB-BENCH-1, etc.)
+
+4. Choose "y" to reboot when prompted
+
+5. After reboot, the Tailscale name will update automatically
+
+   Note: The old "new-box" entry may remain in Tailscale for a short time.
+   You can delete it from the admin console if desired.
+
+
+================================================================================
+PART 5: DEPLOY LAGER SOFTWARE
+================================================================================
+
+Now deploy the Lager software using the Tailscale IP.
+
+Option A - Using lager CLI (recommended):
+-----------------------------------------
+lager install --ip <tailscale-ip>
+
+# Or if you've already added the box to your config:
+lager install --box <box-name>
+
+
+Option B - Using deployment script directly:
+--------------------------------------------
+cli/deployment/scripts/setup_and_deploy_box.sh <tailscale-ip>
+
+
+The deployment will:
+  - Configure SSH keys
+  - Set up passwordless sudo
+  - Configure UFW firewall
+  - Clone the box code repository
+  - Build Docker containers
+  - Start Lager services
+
+
+================================================================================
+PART 6: VERIFY DEPLOYMENT
+================================================================================
+
+After deployment completes, verify everything is working:
+
+1. Test basic connectivity:
+   lager hello --box <box-name>
+
+2. Check connected instruments:
+   lager instruments --box <box-name>
+
+3. SSH into the box (should work without password now):
+   lager ssh --box <box-name>
+
+4. Inside the box, check Docker is running:
+   docker ps
+   # Should show the "lager" container running
+
+
+================================================================================
+PART 7: CONNECT TO WIFI (Optional)
+================================================================================
+
+If you want the box to use WiFi instead of ethernet:
+
+1. SSH into the box:
+   lager ssh --box <box-name>
+
+2. Find WiFi interface name:
+   ip link show | grep -E "wl"
+
+   Note the interface name (e.g., wlp2s0, wlp1s0, wlan0)
+
+3. Edit netplan config:
+   sudo nano /etc/netplan/00-installer-config-wifi.yaml
+
+4. Add this content (replace wlpXsX with your actual interface name):
+   network:
+     version: 2
+     wifis:
+       wlpXsX:
+         dhcp4: true
+         access-points:
+           "your-wifi-network-name":
+             password: "your-wifi-password"
+
+5. Apply the configuration:
+   sudo netplan apply
+
+6. Verify WiFi is connected:
+   ip addr show | grep -A 3 "wl"
+
+   Look for "state UP" and an IP address (e.g., 192.168.x.x)
+
+7. Once WiFi is working, you can disconnect the ethernet cable
+
+
+================================================================================
+PART 8: FUTURE UPDATES
+================================================================================
+
+The "lager update" command is available immediately after deployment -- no
+additional setup is needed. The repository uses HTTPS for git operations,
+so no authentication is required.
+
+  lager update --box <box-name> --version main
+
+If a box was deployed before the open-source migration and uses SSH for git,
+run convert_to_sparse_checkout.sh to switch to HTTPS:
+
+  cli/deployment/scripts/convert_to_sparse_checkout.sh <box-ip> main
+
+
+================================================================================
+TROUBLESHOOTING
+================================================================================
+
+Installation fails with "exit status 100":
+  - Ethernet cable was not connected during installation
+  - Solution: Reconnect ethernet and restart the installation
+
+Box not appearing on Tailscale:
+  - SSH into box via local IP and run: sudo tailscale status
+  - If not connected: sudo tailscale up
+
+Cannot SSH into box:
+  - Verify the IP address is correct
+  - Check if box is powered on and connected to network
+  - Try pinging the box: ping <ip-address>
+
+Docker container not running:
+  - SSH into box and check logs:
+    docker logs lager
+  - Restart the container:
+    cd ~/box && docker compose up -d
+
+lager hello fails:
+  - Check firewall status: sudo ufw status
+  - Verify ports 9000, 5000, 8080 are allowed from tailscale0
+  - Check container is running: docker ps
+
+
+================================================================================
+QUICK REFERENCE
+================================================================================
+
+Default Credentials:
+  Username: lagerdata
+  Password: <your-password>
+
+Key Ports:
+  9000 - Box HTTP/WebSocket (main hardware control)
+  5000 - Python Execution Service
+  8080 - Hardware Invocation Service
+  8765 - Debug Service
+
+Useful Commands:
+  lager hello --box <name>       # Test connectivity
+  lager instruments --box <name> # List connected instruments
+  lager ssh --box <name>         # SSH into box
+  lager update --box <name>      # Update box software
+
+Log Files (inside container):
+  /tmp/lager-http-server.log
+  /tmp/lager-python-service.log
+  /tmp/lager-hardware-service.log
+  /tmp/lager-debug-service.log

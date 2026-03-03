@@ -1,0 +1,266 @@
+---
+title: USB Control
+description: Control USB device power state
+---
+
+Control the power state of USB devices and ports on your testbed using USB hubs with per-port power control.
+
+## Import
+
+```python
+from lager import Net, NetType
+
+# For exception handling
+from lager import (
+    USBBackendError,
+    LibraryMissingError,
+    DeviceNotFoundError,
+    PortStateError
+)
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `enable()` | Enable (power on) USB port |
+| `disable()` | Disable (power off) USB port |
+| `toggle()` | Toggle USB port power state |
+
+## Exception Classes
+
+| Exception | Description |
+|-----------|-------------|
+| `USBBackendError` | Base class for USB hub errors |
+| `LibraryMissingError` | Required vendor SDK not installed |
+| `DeviceNotFoundError` | USB hub not found |
+| `PortStateError` | Error changing port state |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.Usb)`
+
+Get a USB net by name.
+
+```python
+from lager import Net, NetType
+
+usb = Net.get('DUT_USB', type=NetType.Usb)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the USB net |
+| `type` | `NetType` | Must be `NetType.Usb` |
+
+**Returns:** USB Net instance
+
+### `enable()`
+
+Enable (power on) the USB port.
+
+```python
+from lager import Net, NetType
+
+usb = Net.get('CAMERA_USB', type=NetType.Usb)
+usb.enable()
+print("USB port powered on")
+```
+
+### `disable()`
+
+Disable (power off) the USB port.
+
+```python
+from lager import Net, NetType
+
+usb = Net.get('CAMERA_USB', type=NetType.Usb)
+usb.disable()
+print("USB port powered off")
+```
+
+### `toggle()`
+
+Toggle the power state of the USB port.
+
+```python
+from lager import Net, NetType
+
+usb = Net.get('SENSOR_USB', type=NetType.Usb)
+usb.toggle()  # On -> Off or Off -> On
+```
+
+## Examples
+
+### Basic Power Control
+
+```python
+from lager import Net, NetType
+
+# Get USB net
+usb = Net.get('CAMERA', type=NetType.Usb)
+
+# Power on USB device
+usb.enable()
+print("Camera powered on")
+
+# Power off USB device
+usb.disable()
+print("Camera powered off")
+```
+
+### Power Cycle Device
+
+```python
+from lager import Net, NetType
+import time
+
+def power_cycle(net_name, delay=2):
+    """Power cycle a USB device."""
+    usb = Net.get(net_name, type=NetType.Usb)
+    print(f"Power cycling {net_name}...")
+    usb.disable()
+    time.sleep(delay)
+    usb.enable()
+    print(f"{net_name} restarted")
+
+power_cycle('DUT_USB')
+```
+
+### Error Handling
+
+```python
+from lager import Net, NetType
+from lager import (
+    USBBackendError,
+    LibraryMissingError,
+    DeviceNotFoundError,
+    PortStateError
+)
+
+try:
+    usb = Net.get('SENSOR_USB', type=NetType.Usb)
+    usb.enable()
+    print("Sensor powered on")
+
+except LibraryMissingError:
+    print("USB hub SDK not installed")
+
+except DeviceNotFoundError:
+    print("USB hub not found - check connection")
+
+except PortStateError as e:
+    print(f"Port error: {e}")
+
+except USBBackendError as e:
+    print(f"USB error: {e}")
+```
+
+### Automated Test Setup
+
+```python
+from lager import Net, NetType
+import time
+
+def setup_test():
+    """Power on all USB peripherals for testing."""
+    usb_devices = ['PROGRAMMER', 'SENSOR', 'DEBUGGER']
+
+    for name in usb_devices:
+        try:
+            usb = Net.get(name, type=NetType.Usb)
+            usb.enable()
+            print(f"{name} powered on")
+        except Exception as e:
+            print(f"Warning: {name} - {e}")
+
+    time.sleep(1)  # Wait for USB enumeration
+
+    # Enable main power
+    psu = Net.get('VDD', type=NetType.PowerSupply)
+    psu.set_voltage(3.3)
+    psu.enable()
+
+    return True
+
+def teardown_test():
+    """Power off all USB peripherals."""
+    # Disable main power first
+    psu = Net.get('VDD', type=NetType.PowerSupply)
+    psu.disable()
+
+    # Power off USB peripherals
+    for name in ['PROGRAMMER', 'SENSOR', 'DEBUGGER']:
+        try:
+            usb = Net.get(name, type=NetType.Usb)
+            usb.disable()
+        except Exception:
+            pass
+```
+
+### USB Device Reset
+
+```python
+from lager import Net, NetType
+import time
+
+def reset_usb_device(net_name, reset_time=2, settle_time=3):
+    """
+    Reset a USB device by power cycling.
+
+    Args:
+        net_name: USB net name
+        reset_time: Time to keep power off (seconds)
+        settle_time: Time to wait after power on (seconds)
+    """
+    usb = Net.get(net_name, type=NetType.Usb)
+    print(f"Resetting {net_name}...")
+
+    # Power off
+    usb.disable()
+    print(f"  Power off for {reset_time}s")
+    time.sleep(reset_time)
+
+    # Power on
+    usb.enable()
+    print(f"  Power on, waiting {settle_time}s for enumeration")
+    time.sleep(settle_time)
+
+    print(f"  {net_name} reset complete")
+
+# Usage
+reset_usb_device('DUT_USB', reset_time=2, settle_time=5)
+```
+
+### Toggle for Quick State Change
+
+```python
+from lager import Net, NetType
+import time
+
+# Get USB net
+usb = Net.get('LED_USB', type=NetType.Usb)
+
+# Quick on/off cycle using toggle
+for i in range(5):
+    usb.toggle()
+    time.sleep(0.5)
+```
+
+## Supported Hardware
+
+| Hardware | Features |
+|----------|----------|
+| Acroname BrainStem USB Hub | Individual port power control, current monitoring |
+| YKUSH USB Hub | Per-port power switching |
+
+## Notes
+
+- USB nets must be configured on the Lager Box with hub serial number and port mapping
+- Power state changes take effect immediately
+- Allow time for USB enumeration after powering on (~1-3 seconds)
+- Power cycling can be useful for device reset/recovery
+- The `toggle()` function is useful for quick state changes
+- Use exception handling for robust error recovery

@@ -1,0 +1,154 @@
+---
+title: CLI Overview
+description: Introduction to the Lager Command-Line Interface (CLI) for hardware control and automation.
+---
+
+The Lager Command-Line Interface (CLI) provides a powerful and scriptable way to interact with your Lager Box and connected hardware directly from your terminal. It is the ideal tool for manual control, shell scripting, and integration into CI/CD pipelines.
+
+## Core Concepts
+
+The CLI follows a standard `GROUP COMMAND` structure. Most commands operate on a specific Lager Box (Lagerbox), which is specified using the `--box` option.
+
+```bash
+# General command structure
+lager [GLOBAL_OPTIONS] <GROUP> <COMMAND> [ARGS]...
+
+# Example: Read an ADC value from a specific Lager Box
+lager adc SENSOR_1 --box my-lager-box
+
+# Example: Set power supply voltage
+lager supply VDD_MAIN voltage 3.3 --box my-lager-box
+```
+
+### Nets
+
+Most hardware commands operate on **nets** - named abstractions representing physical test points or signals. Nets map friendly names to instrument channels.
+
+```bash
+# List available nets
+lager nets --box my-lager-box
+
+# Use a net in a command
+lager supply supply1 voltage 3.3 --box my-lager-box
+```
+
+## Key Command Groups
+
+Below is a summary of the main command groups available in the Lager CLI.
+
+### Lager Box Management
+- **[Boxes](/source/reference/cli/boxes)**: Manage Lager Box configurations (add, delete, sync, import/export)
+- **[Hello](/source/reference/cli/hello)**: Verify connectivity to your Lager Box
+- **[Update](/source/reference/cli/update)**: Update Lager Box software
+- **[SSH](/source/reference/cli/ssh)**: Direct SSH access to Lager Box
+- **[Logs](/source/reference/cli/logs)**: View Lager Box service logs
+
+### Configuration
+- **[Instruments](/source/reference/cli/instruments)**: List connected test equipment
+- **[Nets](/source/reference/cli/nets)**: Create and manage nets (test point abstractions)
+- **[Defaults](/source/reference/cli/defaults)**: Set default Lager Box and net configurations
+
+### Power & Simulation
+- **[Supply](/source/reference/cli/supply)**: Control programmable power supplies
+- **[Battery](/source/reference/cli/battery)**: Simulate battery characteristics (SOC, voltage, capacity)
+- **[Solar](/source/reference/cli/solar)**: Control solar panel simulators
+- **[E-Load](/source/reference/cli/eload)**: Control electronic loads (CC/CV/CR/CP modes)
+- **[Watt](/source/reference/cli/watt)**: Read power consumption from watt meters
+- **[Energy](/source/reference/cli/energy)**: Integrate energy/charge and compute power statistics (Joulescope JS220)
+
+### Measurement
+- **[Scope](/source/reference/cli/scope)**: Control oscilloscopes for waveform capture
+- **[Logic](/source/reference/cli/logic)**: Control logic analyzers with protocol decoding
+- **[ADC](/source/reference/cli/adc)**: Read analog voltage values
+- **[Thermocouple](/source/reference/cli/tc)**: Read temperature sensors
+
+### I/O & Communication
+- **[GPI](/source/reference/cli/gpi)**: Read digital inputs
+- **[GPO](/source/reference/cli/gpo)**: Write digital outputs
+- **[DAC](/source/reference/cli/dac)**: Analog output voltage control
+- **[UART](/source/reference/cli/uart)**: Serial communication
+- **[USB](/source/reference/cli/usb)**: USB port power control
+- **[BLE](/source/reference/cli/ble)**: Bluetooth Low Energy scanning
+
+### Development
+- **[Debug](/source/reference/cli/debug)**: Flash firmware, GDB server, memory access, RTT logging
+- **[Python](/source/reference/cli/python)**: Execute Python scripts on Lager Box
+- **[Binaries](/source/reference/cli/binaries)**: Run custom binaries on Lager Box
+
+### Utilities
+- **[Webcam](/source/reference/cli/webcam)**: Video capture and streaming
+- **[Arm](/source/reference/cli/arm)**: Control robotic arm positioning
+
+## Example: Test Script Workflow
+
+This example shell script demonstrates a typical hardware test workflow.
+
+```bash
+#!/bin/bash
+
+# Define variables
+LAGER_BOX="my-test-rig"
+FIRMWARE_PATH="build/my_app.hex"
+VOLTAGE_NET="supply1"
+SENSOR_NET="adc1"
+
+# 1. Flash the latest firmware
+echo "--> Flashing firmware..."
+lager debug flash --hex "$FIRMWARE_PATH" --box "$LAGER_BOX"
+
+# 2. Power on the device
+echo "--> Enabling power..."
+lager supply "$VOLTAGE_NET" voltage 3.3 --box "$LAGER_BOX" --yes
+lager supply "$VOLTAGE_NET" enable --box "$LAGER_BOX"
+sleep 2
+
+# 3. Take a sensor reading
+echo "--> Reading sensor..."
+READING=$(lager adc "$SENSOR_NET" --box "$LAGER_BOX")
+echo "Sensor reading: $READING V"
+
+# 4. Check if value is within expected range
+if (( $(echo "$READING > 1.0" | bc -l) )) && (( $(echo "$READING < 2.0" | bc -l) )); then
+    echo "PASS: Value within expected range"
+else
+    echo "FAIL: Value out of range!"
+    exit 1
+fi
+
+# 5. Power down
+echo "--> Disabling power..."
+lager supply "$VOLTAGE_NET" disable --box "$LAGER_BOX" --yes
+
+echo "--> Test complete."
+```
+
+## Setting Default Lager Box
+
+To avoid specifying `--box` on every command, set a default Lager Box:
+
+```bash
+# Set default Lager Box
+lager defaults add --box my-lager-box
+
+# Now commands use the default
+lager supply supply1 voltage 3.3
+lager adc adc1
+```
+
+## Global Options
+
+All commands support these global options:
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lager Box name or IP address |
+| `--help` | Show help for any command |
+| `--version` | Show CLI version |
+
+## Tips
+
+- Use `lager <command> --help` to see all options for any command
+- Most commands support `--yes` to skip confirmation prompts
+- Set defaults with `lager defaults add` to reduce typing
+- Use the `tui` subcommand (where available) for interactive control
+- Commands that read values (like `adc`, `soc`) can be used in scripts

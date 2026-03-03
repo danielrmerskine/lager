@@ -1,0 +1,300 @@
+---
+title: Logic Analyzer (Preview)
+description: Control logic analyzer channels and triggers
+---
+
+Control logic analyzer Nets through the Lager CLI for digital signal capture, protocol decoding, and trigger configuration.
+
+<Warning>
+**Not Yet Available:** The Logic Analyzer feature for Rigol MSO5000 series is currently under development.
+The commands below are documented for preview purposes only. The underlying device methods are not yet
+implemented and the CLI command is disabled. Attempting to use these commands will result in an error.
+Check back in a future release for full functionality.
+</Warning>
+
+<Accordion title="Preview: CLI Commands and Options">
+
+## Syntax
+
+```bash
+lager logic [OPTIONS] NET_NAME COMMAND [ARGS]...
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `enable` | Enable logic analyzer channel |
+| `disable` | Disable logic analyzer channel |
+| `start` | Start waveform capture |
+| `start-single` | Start single waveform capture |
+| `stop` | Stop waveform capture |
+| `measure` | Measure signal characteristics |
+| `trigger` | Configure trigger settings |
+| `cursor` | Control cursor position |
+
+## Command Reference
+
+### `enable`
+
+Enable logic analyzer channel for the specified net.
+
+```bash
+lager logic NET_NAME enable [--box BOX] [--mcu MCU]
+```
+
+### `disable`
+
+Disable logic analyzer channel.
+
+```bash
+lager logic NET_NAME disable [--box BOX] [--mcu MCU]
+```
+
+### `start`
+
+Start continuous waveform capture.
+
+```bash
+lager logic NET_NAME start [--box BOX] [--mcu MCU]
+```
+
+### `start-single`
+
+Start single waveform capture (one-shot).
+
+```bash
+lager logic NET_NAME start-single [--box BOX] [--mcu MCU]
+```
+
+### `stop`
+
+Stop waveform capture.
+
+```bash
+lager logic NET_NAME stop [--box BOX] [--mcu MCU]
+```
+
+---
+
+## Measure Subcommands
+
+### `measure period`
+
+Measure signal period.
+
+```bash
+lager logic NET_NAME measure period [--display BOOL] [--cursor BOOL]
+```
+
+### `measure freq`
+
+Measure signal frequency.
+
+```bash
+lager logic NET_NAME measure freq [--display BOOL] [--cursor BOOL]
+```
+
+### `measure dc-pos` / `measure dc-neg`
+
+Measure positive or negative duty cycle.
+
+```bash
+lager logic NET_NAME measure dc-pos [--display BOOL] [--cursor BOOL]
+lager logic NET_NAME measure dc-neg [--display BOOL] [--cursor BOOL]
+```
+
+### `measure pw-pos` / `measure pw-neg`
+
+Measure positive or negative pulse width.
+
+```bash
+lager logic NET_NAME measure pw-pos [--display BOOL] [--cursor BOOL]
+lager logic NET_NAME measure pw-neg [--display BOOL] [--cursor BOOL]
+```
+
+---
+
+## Trigger Subcommands
+
+### `trigger edge`
+
+Set edge trigger configuration.
+
+```bash
+lager logic NET_NAME trigger edge [OPTIONS]
+```
+
+**Options:**
+- `--mode` - Trigger mode: `normal`, `auto`, `single` (default: normal)
+- `--coupling` - Coupling mode: `dc`, `ac`, `low_freq_rej`, `high_freq_rej` (default: dc)
+- `--source NET` - Trigger source net
+- `--slope` - Trigger slope: `rising`, `falling`, `both`
+- `--level FLOAT` - Trigger level in volts
+
+### `trigger pulse`
+
+Set pulse trigger configuration.
+
+```bash
+lager logic NET_NAME trigger pulse [OPTIONS]
+```
+
+**Options:**
+- `--mode` - Trigger mode
+- `--coupling` - Coupling mode
+- `--source NET` - Trigger source
+- `--level FLOAT` - Trigger level
+- `--trigger-on` - Trigger on: `gt`, `lt`, `gtlt`
+- `--upper FLOAT` - Upper pulse width
+- `--lower FLOAT` - Lower pulse width
+
+### `trigger i2c`
+
+Set I2C protocol trigger.
+
+```bash
+lager logic NET_NAME trigger i2c [OPTIONS]
+```
+
+**Options:**
+- `--mode` - Trigger mode
+- `--coupling` - Coupling mode
+- `--source-scl NET` - SCL trigger source
+- `--source-sda NET` - SDA trigger source
+- `--level-scl FLOAT` - SCL trigger level
+- `--level-sda FLOAT` - SDA trigger level
+- `--trigger-on` - Trigger on: `start`, `restart`, `stop`, `nack`, `address`, `data`, `addr_data`
+- `--address INT` - Address value (for address trigger)
+- `--addr-width` - Address width: `7`, `8`, `9`, `10` bits
+- `--data INT` - Data value (for data trigger)
+- `--data-width` - Data width: `1`-`5` bytes
+- `--direction` - Direction: `write`, `read`, `rw`
+
+### `trigger uart`
+
+Set UART protocol trigger.
+
+```bash
+lager logic NET_NAME trigger uart [OPTIONS]
+```
+
+**Options:**
+- `--mode` - Trigger mode
+- `--coupling` - Coupling mode
+- `--source NET` - Trigger source
+- `--level FLOAT` - Trigger level
+- `--trigger-on` - Trigger on: `start`, `error`, `cerror`, `data`
+- `--parity` - Parity: `even`, `odd`, `none`
+- `--stop-bits` - Stop bits: `1`, `1.5`, `2`
+- `--baud INT` - Baud rate
+- `--data-width INT` - Data width in bits
+- `--data INT` - Data value to trigger on
+
+### `trigger spi`
+
+Set SPI protocol trigger.
+
+```bash
+lager logic NET_NAME trigger spi [OPTIONS]
+```
+
+**Options:**
+- `--mode` - Trigger mode
+- `--coupling` - Coupling mode
+- `--source-mosi-miso NET` - MOSI/MISO source
+- `--source-sck NET` - SCK source
+- `--source-cs NET` - CS source
+- `--level-mosi-miso FLOAT` - MOSI/MISO level
+- `--level-sck FLOAT` - SCK level
+- `--level-cs FLOAT` - CS level
+- `--data INT` - Trigger data value
+- `--data-width INT` - Data width in bits
+- `--clk-slope` - Clock slope: `positive`, `negative`
+- `--trigger-on` - Trigger on: `timeout`, `cs`
+- `--cs-idle` - CS idle state: `high`, `low`
+- `--timeout FLOAT` - Timeout length
+
+---
+
+## Cursor Subcommands
+
+### `cursor set-a` / `cursor set-b`
+
+Set cursor A or B position.
+
+```bash
+lager logic NET_NAME cursor set-a [--x FLOAT] [--y FLOAT]
+lager logic NET_NAME cursor set-b [--x FLOAT] [--y FLOAT]
+```
+
+### `cursor move-a` / `cursor move-b`
+
+Shift cursor position.
+
+```bash
+lager logic NET_NAME cursor move-a [--del-x FLOAT] [--del-y FLOAT]
+lager logic NET_NAME cursor move-b [--del-x FLOAT] [--del-y FLOAT]
+```
+
+### `cursor hide`
+
+Hide the cursor.
+
+```bash
+lager logic NET_NAME cursor hide
+```
+
+---
+
+## Examples
+
+```bash
+# Enable logic channel
+lager logic SPI_CLK enable --box my-lager-box
+
+# Start capture
+lager logic SPI_CLK start
+
+# Measure frequency
+lager logic SPI_CLK measure freq
+
+# Set edge trigger on rising edge at 1.5V
+lager logic SPI_CLK trigger edge --slope rising --level 1.5
+
+# Set I2C trigger on address match
+lager logic I2C_SDA trigger i2c --trigger-on address --address 0x50 --direction write
+
+# Set UART trigger on data match
+lager logic UART_TX trigger uart --trigger-on data --baud 115200 --data 0x55
+
+# Set SPI trigger
+lager logic SPI_MOSI trigger spi --data 0xFF --data-width 8
+```
+
+---
+
+## Supported Hardware
+
+| Manufacturer | Model Series | Features |
+|--------------|--------------|----------|
+| Rigol | MSO5000 | Mixed-signal, protocol decode |
+| Saleae | Logic Pro | High-speed capture |
+
+---
+
+## Notes
+
+- Logic nets capture digital signals (high/low states)
+- Protocol triggers (I2C, UART, SPI) require proper level configuration
+- Use `lager nets` to see available logic nets
+- Analog and Logic nets can be combined for mixed-signal analysis
+
+</Accordion>

@@ -1,0 +1,253 @@
+---
+title: Watt Meter
+description: Read power consumption
+---
+
+Measure power consumption from watt meter nets. Supports Yocto-Watt and Joulescope JS220 hardware.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Hardware | Description |
+|--------|----------|-------------|
+| `read()` | All | Read power in watts |
+| `read_current()` | Joulescope JS220 only | Read current in amps |
+| `read_voltage()` | Joulescope JS220 only | Read voltage in volts |
+| `read_all()` | Joulescope JS220 only | Read current, voltage, and power in a single operation |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.WattMeter)`
+
+Get a watt meter net by name.
+
+```python
+from lager import Net, NetType
+
+power = Net.get('POWER_METER', type=NetType.WattMeter)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the watt meter net |
+| `type` | `NetType` | Must be `NetType.WattMeter` |
+
+**Returns:** Watt meter Net instance
+
+### `read()`
+
+Read the current power consumption. Available on all watt meter hardware.
+
+```python
+watts = power.read()
+print(f"Power: {watts}W")
+```
+
+**Returns:** `float` - Power in watts
+
+### `read_current()`
+
+Read the current in amps. **Joulescope JS220 only.**
+
+```python
+amps = power.read_current()
+print(f"Current: {amps}A")
+```
+
+**Returns:** `float` - Current in amps
+
+### `read_voltage()`
+
+Read the voltage in volts. **Joulescope JS220 only.**
+
+```python
+volts = power.read_voltage()
+print(f"Voltage: {volts}V")
+```
+
+**Returns:** `float` - Voltage in volts
+
+### `read_all()`
+
+Read current, voltage, and power in a single atomic measurement. **Joulescope JS220 only.** This is more efficient than calling `read_current()`, `read_voltage()`, and `read()` separately, as all values come from the same sample window.
+
+```python
+measurements = power.read_all()
+print(f"Current: {measurements['current']}A")
+print(f"Voltage: {measurements['voltage']}V")
+print(f"Power: {measurements['power']}W")
+```
+
+**Returns:** `dict` with keys:
+
+| Key | Type | Description |
+|-----|------|-------------|
+| `"current"` | `float` | Current in amps |
+| `"voltage"` | `float` | Voltage in volts |
+| `"power"` | `float` | Power in watts |
+
+## Examples
+
+### Basic Power Reading
+
+```python
+from lager import Net, NetType
+
+power = Net.get('DEVICE_POWER', type=NetType.WattMeter)
+
+watts = power.read()
+print(f"Power consumption: {watts:.3f}W")
+```
+
+### Joulescope Full Measurement
+
+```python
+from lager import Net, NetType
+
+power = Net.get('DEVICE_POWER', type=NetType.WattMeter)
+
+# Read all measurements at once (Joulescope JS220 only)
+data = power.read_all()
+print(f"Voltage: {data['voltage']:.3f}V")
+print(f"Current: {data['current']:.6f}A")
+print(f"Power: {data['power']:.3f}W")
+```
+
+### Power Profiling
+
+```python
+from lager import Net, NetType
+import time
+
+power = Net.get('DEVICE_POWER', type=NetType.WattMeter)
+
+measurements = []
+
+# Take 60 seconds of measurements
+for i in range(60):
+    watts = power.read()
+    measurements.append(watts)
+    print(f"[{i:3d}s] {watts:.3f}W")
+    time.sleep(1)
+
+# Statistics
+avg = sum(measurements) / len(measurements)
+max_p = max(measurements)
+min_p = min(measurements)
+
+print(f"\nAverage: {avg:.3f}W")
+print(f"Maximum: {max_p:.3f}W")
+print(f"Minimum: {min_p:.3f}W")
+```
+
+### Battery Life Estimation
+
+```python
+from lager import Net, NetType
+import time
+
+power = Net.get('POWER', type=NetType.WattMeter)
+
+# Average over multiple readings
+readings = []
+for _ in range(10):
+    readings.append(power.read())
+    time.sleep(0.1)
+
+avg_power = sum(readings) / len(readings)
+
+# Estimate battery life (1000mAh @ 3.7V = 3.7Wh)
+battery_wh = 3.7
+hours = battery_wh / avg_power if avg_power > 0 else float('inf')
+
+print(f"Average power: {avg_power:.3f}W")
+print(f"Est. battery life: {hours:.1f} hours")
+```
+
+### Power Limit Verification
+
+```python
+from lager import Net, NetType
+import time
+
+def verify_power_limits(min_watts, max_watts):
+    power = Net.get('DEVICE_POWER', type=NetType.WattMeter)
+
+    # Average multiple readings
+    readings = []
+    for _ in range(10):
+        readings.append(power.read())
+        time.sleep(0.1)
+
+    avg = sum(readings) / len(readings)
+
+    if min_watts <= avg <= max_watts:
+        print(f"PASS: {avg:.3f}W in range [{min_watts}, {max_watts}]")
+        return True
+    else:
+        print(f"FAIL: {avg:.3f}W outside range [{min_watts}, {max_watts}]")
+        return False
+
+# Test
+verify_power_limits(0.1, 5.0)
+```
+
+### Sleep Current Verification (Joulescope)
+
+```python
+from lager import Net, NetType
+import time
+
+power = Net.get('DEVICE_POWER', type=NetType.WattMeter)
+
+# Put device in sleep mode (external trigger)
+# set_device_sleep_mode()
+time.sleep(2)  # Wait for stabilization
+
+# Use read_all() for atomic measurement (Joulescope JS220)
+data = power.read_all()
+sleep_current_ua = data['current'] * 1e6
+
+print(f"Sleep voltage: {data['voltage']:.3f}V")
+print(f"Sleep current: {sleep_current_ua:.1f}uA")
+print(f"Sleep power: {data['power']:.6f}W")
+
+if sleep_current_ua < 100:
+    print("PASS: Sleep current below 100uA")
+else:
+    print("FAIL: Sleep current exceeds limit")
+```
+
+## Supported Hardware
+
+| Manufacturer | Model | Measurement | Features |
+|--------------|-------|-------------|----------|
+| Yoctopuce | Yocto-Watt | Power only | Instantaneous reading |
+| Joulescope | JS220 | Power, voltage, current | 0.1s averaged, atomic multi-measurement |
+
+### Hardware Feature Comparison
+
+| Feature | Yocto-Watt | Joulescope JS220 |
+|---------|-----------|------------------|
+| `read()` (power) | Yes | Yes |
+| `read_current()` | No | Yes |
+| `read_voltage()` | No | Yes |
+| `read_all()` | No | Yes |
+| Measurement method | Instantaneous | 0.1s averaged |
+| Device selection | Channel-based | Serial number-based |
+
+## Notes
+
+- Power is returned in watts (W)
+- Joulescope JS220 averages measurements over 0.1 seconds for higher precision
+- `read_current()`, `read_voltage()`, and `read_all()` are only available on the Joulescope JS220; calling them on a Yocto-Watt will raise an error
+- For current on Yocto-Watt: calculate from power and known voltage (I = P / V)
+- Use multiple readings and averaging for stability
+- Allow settling time after device state changes

@@ -1,0 +1,427 @@
+---
+title: The .lager Configuration File
+description: Complete reference for the .lager JSON configuration file
+---
+
+The `.lager` file is a JSON configuration file that stores settings for the Lager CLI. There are **two distinct versions** of this file that serve different purposes: a **global** file shared across all projects, and a **project-local** file specific to a single project directory.
+
+## Two Files, Two Purposes
+
+| | Global `.lager` | Project-Local `.lager` |
+|---|---|---|
+| **Location** | `~/.lager` | Any directory in your project (found by searching upward from cwd) |
+| **Created by** | `lager boxes add`, `lager defaults add`, `lager nets add` | `lager devenv create`, or manually |
+| **Purpose** | Machine-wide box registry, net definitions, command defaults | Project-specific Docker dev environment, debug scripts, file includes |
+| **Sections** | `DEFAULTS`, `BOXES`, `NETS` | `DEVENV`, `DEBUG`, `includes` |
+| **Shared** | One file for all projects | One per project (committed to version control) |
+
+The CLI always knows which file to use. Commands like `lager boxes` and `lager defaults` read and write the global file. Commands like `lager devenv` and `lager exec` search upward from your current directory for a project-local file. The two files never conflict -- they contain entirely different sections.
+
+When `lager devenv terminal` or `lager exec` starts a Docker container, the global `~/.lager` file is automatically mounted inside the container at `/lager/.lager` (with `LAGER_CONFIG_FILE_DIR=/lager`), so that box and net definitions are available inside the container.
+
+---
+
+## Global File (`~/.lager`)
+
+The global file lives in your home directory and is shared across all projects. It stores your box registry, hardware net configurations, and command defaults.
+
+### DEFAULTS
+
+Stores default values so you can omit common options from CLI commands. When you run a command without specifying `--box` or a net name, the CLI checks this section.
+
+Managed with `lager defaults`.
+
+**Fields:**
+
+| Config Key | CLI Option | Description |
+|------------|-----------|-------------|
+| `gateway_id` | `--box` | Default box name |
+| `serial_device` | `--serial-port` | Default serial port path |
+| `net_power_supply` | `--supply-net` | Default power supply net |
+| `net_battery` | `--battery-net` | Default battery net |
+| `net_solar` | `--solar-net` | Default solar net |
+| `net_scope` | `--scope-net` | Default oscilloscope net |
+| `net_logic` | `--logic-net` | Default logic analyzer net |
+| `net_adc` | `--adc-net` | Default ADC net |
+| `net_dac` | `--dac-net` | Default DAC net |
+| `net_gpio` | `--gpio-net` | Default GPIO net |
+| `net_debug` | `--debug-net` | Default debug net |
+| `net_eload` | `--eload-net` | Default electronic load net |
+| `net_usb` | `--usb-net` | Default USB hub net |
+| `net_webcam` | `--webcam-net` | Default webcam net |
+| `net_watt_meter` | `--watt-meter-net` | Default watt meter net |
+| `net_thermocouple` | `--thermocouple-net` | Default thermocouple net |
+| `net_uart` | `--uart-net` | Default UART net |
+| `net_arm` | `--arm-net` | Default robotic arm net |
+
+**Example:**
+
+```json
+{
+  "DEFAULTS": {
+    "gateway_id": "lab-box-1",
+    "serial_device": "/dev/ttyUSB0",
+    "net_power_supply": "VDD_MAIN",
+    "net_debug": "SWD",
+    "net_uart": "SERIAL_DBG"
+  }
+}
+```
+
+**CLI commands:**
+
+```bash
+lager defaults add --box lab-box-1 --supply-net VDD_MAIN
+lager defaults list
+lager defaults delete box
+lager defaults delete-all
+```
+
+**Resolution order:** When a command needs a box or net name, it checks:
+1. Command-line option (`--box`, net argument) -- highest priority
+2. `LAGER_BOX` environment variable (for box only)
+3. `DEFAULTS` section in global `~/.lager`
+4. Error if required and not found
+
+---
+
+### BOXES
+
+Maps human-readable box names to their IP addresses. This is the box registry that all other commands use to resolve box names to IPs.
+
+Managed with `lager boxes`.
+
+Each entry can be either a simple IP string (legacy format) or an object with additional metadata.
+
+**Fields (object format):**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `ip` | Yes | IP address of the box (typically a Tailscale IP) |
+| `user` | No | Username for SSH access |
+| `version` | No | Branch or version the box is running (e.g., `"main"`, `"staging"`) |
+
+**Example:**
+
+```json
+{
+  "BOXES": {
+    "lab-box-1": "100.64.0.10",
+    "lab-box-2": {
+      "ip": "100.64.0.11",
+      "user": "admin",
+      "version": "staging"
+    },
+    "remote-box": "192.168.1.50"
+  }
+}
+```
+
+**CLI commands:**
+
+```bash
+lager boxes add --name lab-box-1 --ip 100.64.0.10
+lager boxes add --name lab-box-2 --ip 100.64.0.11 --user admin --version staging
+lager boxes list
+lager boxes edit --name lab-box-1 --ip 100.64.0.12
+lager boxes delete --name lab-box-1
+lager boxes delete-all
+lager boxes export                    # Print boxes as JSON
+lager boxes import --file boxes.json  # Import boxes from JSON
+```
+
+---
+
+### NETS
+
+Stores hardware net configurations organized by box name. Each net maps a human-readable name to a physical hardware connection (channel on an instrument). Nets are stored in the global file but the actual net data lives on the box -- this section serves as a local cache managed by `lager nets`.
+
+**Structure:** A dictionary keyed by box name, where each value is an array of net objects.
+
+**Net object fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `name` | Yes | Unique name for the net (e.g., `"VDD_MAIN"`, `"SWD"`) |
+| `role` | Yes | Net type: `supply`, `battery`, `solar`, `eload`, `adc`, `dac`, `gpio`, `debug`, `scope`, `logic`, `uart`, `i2c`, `spi`, `usb`, `watt`, `thermocouple`, `webcam`, `arm` |
+| `instrument` | Yes | Instrument model name (e.g., `"Rigol_DP831"`, `"LabJack_T7"`) |
+| `address` | Yes | Instrument address (USB or network path) |
+| `pin` | Yes | Channel or pin number on the instrument |
+| `jlink_script` | No | Base64-encoded J-Link script (debug nets only) |
+| `device_path` | No | Direct device path (UART nets with USB serial, e.g., `"/dev/ttyUSB0"`) |
+| `channel` | No | Port number (UART nets) |
+
+**Example:**
+
+```json
+{
+  "NETS": {
+    "lab-box-1": [
+      {
+        "name": "VDD_MAIN",
+        "role": "supply",
+        "instrument": "Rigol_DP831",
+        "address": "USB0::0x1AB1::0x0E11::DP8XXXXXXX::INSTR",
+        "pin": "1"
+      },
+      {
+        "name": "SWD",
+        "role": "debug",
+        "instrument": "JLink",
+        "address": "USB0::JLink",
+        "pin": "0",
+        "jlink_script": "base64encodedcontent..."
+      },
+      {
+        "name": "I2C_BUS",
+        "role": "i2c",
+        "instrument": "Aardvark",
+        "address": "USB0::Aardvark",
+        "pin": "0"
+      }
+    ]
+  }
+}
+```
+
+**CLI commands:**
+
+```bash
+lager nets                                           # List all nets
+lager nets add VDD_MAIN supply 1 <address>           # Add a net
+lager nets add-all                                   # Auto-create all possible nets
+lager nets add-batch nets.json                       # Batch add from JSON file
+lager nets delete VDD_MAIN supply                    # Delete a net
+lager nets delete-all                                # Delete all nets
+lager nets rename VDD_MAIN VDD_3V3                   # Rename a net
+lager nets set-script SWD ./my_device.JLinkScript    # Attach J-Link script
+lager nets remove-script SWD                         # Remove J-Link script
+lager nets show-script SWD                           # Display J-Link script
+lager nets tui                                       # Interactive TUI manager
+```
+
+---
+
+## Project-Local File (`./.lager`)
+
+The project-local file lives in your project directory (or any parent directory). The CLI finds it by searching upward from your current working directory. It is typically committed to version control so that all developers on a project share the same development environment configuration.
+
+This file is completely separate from the global `~/.lager` -- it contains different sections and is read by different commands.
+
+### How the local file is found
+
+When you run `lager devenv terminal`, `lager exec`, or `lager debug`, the CLI starts in your current directory and walks up the directory tree until it finds a `.lager` file (that is not the global `~/.lager`). The first one found is used.
+
+```
+/home/user/projects/my-firmware/.lager    <-- found first (used)
+/home/user/projects/.lager                <-- also exists but not used
+/home/user/.lager                         <-- global file (separate)
+```
+
+### DEVENV
+
+Configures a Docker-based development environment for your project. Managed with `lager devenv`.
+
+When you run `lager devenv terminal`, the CLI reads this section to determine which Docker image to launch, where to mount your source code, and how to configure the container. When you run `lager exec <name>`, it reads the saved commands from this section.
+
+**Fields:**
+
+| Field | Required | Description |
+|-------|----------|-------------|
+| `image` | Yes | Docker image name (e.g., `"lagerdata/devenv-cortexm"`) |
+| `mount_dir` | Yes | Directory inside the container where your source code is mounted (e.g., `"/app"`) |
+| `shell` | Yes | Shell executable path inside the container (e.g., `"/bin/bash"`) |
+| `user` | No | User to run as inside the container |
+| `group` | No | Group to run as inside the container |
+| `macaddr` | No | MAC address to assign to the container |
+| `hostname` | No | Hostname to assign to the container |
+| `repo_root_relative_path` | No | Relative path from the `.lager` file to the repo root. Used when the `.lager` file is in a subdirectory -- the CLI mounts the repo root and sets the working directory to the correct subdirectory. |
+| `cmd.<name>` | No | Custom named commands that can be executed with `lager exec <name>` |
+
+**Example:**
+
+```json
+{
+  "DEVENV": {
+    "image": "lagerdata/devenv-cortexm:latest",
+    "mount_dir": "/app",
+    "shell": "/bin/bash",
+    "user": "1000",
+    "group": "1000",
+    "hostname": "devbox",
+    "repo_root_relative_path": "..",
+    "cmd.build": "make -j$(nproc)",
+    "cmd.flash": "openocd -f board.cfg -c 'program build/fw.elf verify reset exit'",
+    "cmd.test": "ctest --output-on-failure"
+  }
+}
+```
+
+**CLI commands:**
+
+```bash
+lager devenv create                       # Interactive setup (creates DEVENV section)
+lager devenv terminal                     # Start interactive Docker shell
+lager devenv add build "make -j4"         # Add a named command
+lager devenv delete build                 # Remove a named command
+lager devenv commands                     # List all named commands
+lager exec build                          # Run a named command in Docker
+lager exec --command 'make clean'         # Run an ad-hoc command in Docker
+lager exec --command 'make' --save-as mk  # Run and save for later
+```
+
+---
+
+### DEBUG
+
+Maps debug net names to local J-Link script file paths. Paths can be relative (resolved relative to the `.lager` file location) or absolute.
+
+This is separate from the `jlink_script` field on net objects in the `NETS` section of the global file. The `DEBUG` section provides project-local script overrides -- `lager debug` commands check this section first before using the script stored on the box. This lets you keep J-Link scripts in your project repo and have them used automatically.
+
+**Example:**
+
+```json
+{
+  "DEBUG": {
+    "SWD": "./scripts/my_device.JLinkScript",
+    "JTAG": "/absolute/path/to/other.JLinkScript"
+  }
+}
+```
+
+---
+
+### includes
+
+Maps destination names to source directories that should be uploaded alongside Python scripts run with `lager python`. This lets your test scripts import from external directories outside the project.
+
+Paths are resolved relative to the `.lager` file location.
+
+**Example:**
+
+```json
+{
+  "includes": {
+    "dtest": "../dtest",
+    "shared_lib": "/absolute/path/to/shared"
+  }
+}
+```
+
+When you run `lager python test_script.py`, the CLI checks the local `.lager` for an `includes` section and uploads the referenced directories to the box so they are available as imports.
+
+---
+
+## Environment Variables
+
+These environment variables override the default file location and behavior:
+
+| Variable | Description |
+|----------|-------------|
+| `LAGER_CONFIG_FILE_DIR` | Override the directory where the global `.lager` file is located (default: `~`) |
+| `LAGER_CONFIG_FILE_NAME` | Override the filename (default: `.lager`) |
+| `LAGER_BOX` | Override the default box for all commands (takes priority over `DEFAULTS.gateway_id`) |
+
+```bash
+# Use a custom config directory
+export LAGER_CONFIG_FILE_DIR=/opt/lager
+
+# Override default box for this session
+export LAGER_BOX=lab-box-2
+```
+
+---
+
+## Legacy Format Migration
+
+Older `.lager` files may use lowercase section names. The CLI automatically upgrades these when writing:
+
+| Legacy Key | Current Key |
+|------------|-------------|
+| `duts` | `BOXES` |
+| `DUTS` | `BOXES` |
+| `LAGER` | `DEFAULTS` |
+| `nets` | `NETS` |
+| `devenv` | `DEVENV` |
+| `debug` | `DEBUG` |
+
+No manual migration is required. The CLI reads both formats and writes back the current uppercase format.
+
+---
+
+## Complete Examples
+
+### Global `~/.lager`
+
+```json
+{
+  "DEFAULTS": {
+    "gateway_id": "lab-box-1",
+    "net_power_supply": "VDD_MAIN",
+    "net_debug": "SWD",
+    "net_uart": "SERIAL_DBG",
+    "net_adc": "ADC_SENSE"
+  },
+  "BOXES": {
+    "lab-box-1": {
+      "ip": "100.64.0.10",
+      "version": "main"
+    },
+    "lab-box-2": "100.64.0.11",
+    "remote-box": "192.168.1.50"
+  },
+  "NETS": {
+    "lab-box-1": [
+      {
+        "name": "VDD_MAIN",
+        "role": "supply",
+        "instrument": "Rigol_DP831",
+        "address": "USB0::0x1AB1::0x0E11::DP8XXXXXXX::INSTR",
+        "pin": "1"
+      },
+      {
+        "name": "SWD",
+        "role": "debug",
+        "instrument": "JLink",
+        "address": "USB0::JLink",
+        "pin": "0"
+      },
+      {
+        "name": "SERIAL_DBG",
+        "role": "uart",
+        "instrument": "Unknown_UART_Device",
+        "address": "USB0::uart",
+        "pin": "/dev/ttyUSB0",
+        "device_path": "/dev/ttyUSB0"
+      },
+      {
+        "name": "ADC_SENSE",
+        "role": "adc",
+        "instrument": "LabJack_T7",
+        "address": "USB0::LabJack",
+        "pin": "AIN0"
+      }
+    ]
+  }
+}
+```
+
+### Project-local `./my-firmware/.lager`
+
+```json
+{
+  "DEVENV": {
+    "image": "lagerdata/devenv-cortexm",
+    "mount_dir": "/app",
+    "shell": "/bin/bash",
+    "cmd.build": "make -j$(nproc)",
+    "cmd.flash": "make flash"
+  },
+  "DEBUG": {
+    "SWD": "./scripts/my_device.JLinkScript"
+  },
+  "includes": {
+    "test_framework": "../shared/test_framework"
+  }
+}
+```

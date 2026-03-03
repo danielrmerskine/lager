@@ -1,0 +1,280 @@
+---
+title: SPI
+description: Communicate with SPI devices over the serial peripheral interface
+---
+
+Perform full-duplex SPI (Serial Peripheral Interface) communication with devices connected to a Lager Box.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `config()` | Configure SPI bus parameters |
+| `read()` | Read words from a device (sends fill bytes) |
+| `read_write()` | Simultaneous full-duplex read and write |
+| `transfer()` | Transfer with automatic padding/truncation |
+| `write()` | Write words to a device (discards response) |
+| `get_config()` | Get raw net configuration |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.SPI)`
+
+Get an SPI net by name.
+
+```python
+from lager import Net, NetType
+
+spi = Net.get('MY_SPI_NET', type=NetType.SPI)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the SPI net |
+| `type` | `NetType` | Must be `NetType.SPI` |
+
+**Returns:** SPI Net instance
+
+### `config(mode, bit_order, frequency_hz, word_size, cs_active, cs_mode)`
+
+Configure SPI bus parameters. Only explicitly-provided parameters are changed; omitted parameters retain their stored values.
+
+```python
+spi.config(mode=0, frequency_hz=1_000_000)
+spi.config(mode=3, bit_order="lsb", word_size=16)
+spi.config(cs_mode="manual")
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mode` | `int` or `None` | SPI mode 0-3 (see SPI Modes table below) |
+| `bit_order` | `str` or `None` | `"msb"` (most significant bit first) or `"lsb"` |
+| `frequency_hz` | `int` or `None` | Clock frequency in Hz |
+| `word_size` | `int` or `None` | Bits per word: `8`, `16`, or `32` |
+| `cs_active` | `str` or `None` | Chip select polarity: `"low"` or `"high"` |
+| `cs_mode` | `str` or `None` | `"auto"` (hardware CS) or `"manual"` (user-managed GPIO) |
+
+#### SPI Modes
+
+| Mode | CPOL | CPHA | Clock Idle | Sample Edge |
+|------|------|------|------------|-------------|
+| 0 | 0 | 0 | Low | Rising |
+| 1 | 0 | 1 | Low | Falling |
+| 2 | 1 | 0 | High | Falling |
+| 3 | 1 | 1 | High | Rising |
+
+### `read(n_words, fill, keep_cs, output_format)`
+
+Read data from an SPI device. Sends fill bytes while receiving data (full duplex).
+
+```python
+data = spi.read(n_words=4)
+data = spi.read(n_words=4, fill=0x00)
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `n_words` | `int` | Number of words to read |
+| `fill` | `int` | Fill value sent while reading (default `0xFF`) |
+| `keep_cs` | `bool` | Keep CS asserted after transfer (default `False`) |
+| `output_format` | `str` | `"list"` (default), `"hex"`, `"bytes"`, or `"json"` |
+
+**Returns:** `list[int]` - Received words as integers (when `output_format="list"`)
+
+### `read_write(data, keep_cs, output_format)`
+
+Perform simultaneous full-duplex SPI read and write. Sends data while simultaneously receiving the response.
+
+```python
+# Send JEDEC Read ID command and read 3 response bytes
+response = spi.read_write([0x9F, 0x00, 0x00, 0x00])
+manufacturer_id = response[1]
+device_id = (response[2] << 8) | response[3]
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `list[int]` | Words to transmit |
+| `keep_cs` | `bool` | Keep CS asserted after transfer (default `False`) |
+| `output_format` | `str` | `"list"` (default), `"hex"`, `"bytes"`, or `"json"` |
+
+**Returns:** `list[int]` - Received words (same length as transmitted data)
+
+### `transfer(n_words, data, fill, keep_cs, output_format)`
+
+Perform SPI transfer with automatic padding or truncation. If data is shorter than `n_words`, it is padded with the fill value. If longer, it is truncated.
+
+```python
+# Send 1-byte command, read 3 response bytes (4 total)
+response = spi.transfer(n_words=4, data=[0x9F])
+# data [0x9F] is padded to [0x9F, 0xFF, 0xFF, 0xFF]
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `n_words` | `int` | Total number of words to transfer |
+| `data` | `list[int]` or `None` | Words to transmit (padded/truncated to `n_words`) |
+| `fill` | `int` | Fill value for padding (default `0xFF`) |
+| `keep_cs` | `bool` | Keep CS asserted after transfer (default `False`) |
+| `output_format` | `str` | `"list"` (default), `"hex"`, `"bytes"`, or `"json"` |
+
+**Returns:** `list[int]` - Received words
+
+### `write(data, keep_cs)`
+
+Write data to an SPI device, discarding the response. Convenience method for write-only operations.
+
+```python
+# Send Write Enable command
+spi.write([0x06])
+
+# Send Page Program with address and data
+spi.write([0x02, 0x00, 0x00, 0x00, 0xDE, 0xAD, 0xBE, 0xEF])
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `data` | `list[int]` | Words to transmit |
+| `keep_cs` | `bool` | Keep CS asserted after transfer (default `False`) |
+
+### `get_config()`
+
+Get the raw net configuration dictionary.
+
+```python
+cfg = spi.get_config()
+print(cfg['name'])
+print(cfg['params'])
+```
+
+**Returns:** `dict` - Full net configuration including name, role, instrument, and params
+
+## Output Formats
+
+The `output_format` parameter controls how data is returned. Hex formatting is word-size-aware:
+
+| Format | Return Type | 8-bit Example | 16-bit Example |
+|--------|-------------|---------------|----------------|
+| `"list"` | `list[int]` | `[222, 173]` | `[57005]` |
+| `"hex"` | `str` | `"de ad"` | `"dead"` |
+| `"bytes"` | `str` | `"222 173"` | `"57005"` |
+| `"json"` | `dict` | `{"data": [222, 173]}` | `{"data": [57005]}` |
+
+## Examples
+
+### Read SPI Flash JEDEC ID
+
+```python
+from lager import Net, NetType
+
+spi = Net.get('flash_spi', type=NetType.SPI)
+spi.config(mode=0, frequency_hz=1_000_000)
+
+# JEDEC Read ID: send 0x9F, read 3 response bytes
+response = spi.read_write([0x9F, 0x00, 0x00, 0x00])
+print(f"Manufacturer: 0x{response[1]:02x}")
+print(f"Device ID: 0x{(response[2] << 8) | response[3]:04x}")
+```
+
+### Read Flash Memory
+
+```python
+from lager import Net, NetType
+
+spi = Net.get('flash_spi', type=NetType.SPI)
+spi.config(mode=0, frequency_hz=1_000_000)
+
+# Read 32 bytes starting at address 0x001000
+# Command: 0x03 (Read), followed by 3-byte address
+response = spi.transfer(
+    n_words=4 + 32,
+    data=[0x03, 0x00, 0x10, 0x00],
+)
+# First 4 bytes are command echo; data starts at index 4
+data = response[4:]
+print(f"Read {len(data)} bytes: {' '.join(f'{b:02x}' for b in data)}")
+```
+
+### Multi-Part Transaction with keep_cs
+
+```python
+from lager import Net, NetType
+
+spi = Net.get('flash_spi', type=NetType.SPI)
+
+# Part 1: Send address with CS held low
+spi.write([0x03, 0x00, 0x10, 0x00], keep_cs=True)
+
+# Part 2: Read data while CS is still asserted
+data = spi.read(n_words=32, keep_cs=False)
+print(f"Read {len(data)} bytes")
+```
+
+### Write to SPI Flash
+
+```python
+from lager import Net, NetType
+
+spi = Net.get('flash_spi', type=NetType.SPI)
+spi.config(mode=0, frequency_hz=1_000_000)
+
+# Step 1: Write Enable
+spi.write([0x06])
+
+# Step 2: Page Program at address 0x001000
+payload = [0xDE, 0xAD, 0xBE, 0xEF]
+spi.write([0x02, 0x00, 0x10, 0x00] + payload)
+
+# Step 3: Wait for write to complete (poll status register)
+import time
+while True:
+    status = spi.read_write([0x05, 0x00])
+    if not (status[1] & 0x01):  # WIP bit cleared
+        break
+    time.sleep(0.01)
+
+print("Write complete")
+```
+
+### 16-bit Word Mode
+
+```python
+from lager import Net, NetType
+
+spi = Net.get('dac_spi', type=NetType.SPI)
+spi.config(mode=1, word_size=16, frequency_hz=500_000)
+
+# Send 16-bit DAC command (channel A, gain 1x, active, value 0x0800)
+spi.write([0x3800])
+
+# Read back 16-bit status register
+status = spi.read_write([0x0000])
+print(f"Status: 0x{status[0]:04x}")
+```
+
+## Supported Hardware
+
+| Adapter | Description |
+|---------|-------------|
+| LabJack T7 | Uses GPIO pins (FIO/EIO) for CLK, MOSI, MISO, and CS |
+| Aardvark I2C/SPI | Dedicated USB SPI adapter with GPIO bit-bang |
+
+## Notes
+
+- Net must be configured as `NetType.SPI`
+- All SPI operations are full duplex; data is sent and received simultaneously
+- `write()` performs a full-duplex transfer but discards the received data
+- `keep_cs=True` holds the chip select line asserted between calls for multi-part transactions
+- `transfer()` pads short data arrays with the fill value or truncates long arrays to `n_words`
+- LabJack T7 supports up to 56 bytes per transaction and a maximum of approximately 800 kHz
+- Aardvark uses GPIO bit-bang mode; actual speed is limited by USB round-trip time regardless of `frequency_hz`
+- Configuration changes persist to `saved_nets.json` for subsequent commands
+- LSB-first mode (`bit_order="lsb"`) uses software bit reversal on LabJack T7

@@ -1,0 +1,50 @@
+---
+title: "Version 0.3.14"
+description: "January 20, 2026"
+---
+
+## <u>Improvements</u>
+
+### Enhanced Error Messages
+- All CLI commands now provide clearer, more actionable error messages
+- Error messages include specific guidance on how to fix issues
+- Consistent error formatting across all commands
+
+### Input Validation
+- Added range validation for numeric parameters (voltages, currents, percentages, timeouts)
+- Added format validation for BLE addresses, IP addresses, and package names
+- Invalid inputs are rejected early with helpful error messages showing valid ranges
+
+### Connection Error Handling
+- Improved distinction between timeout, DNS errors, connection refused, and unreachable host
+- SSH commands now include platform-specific troubleshooting hints
+- Better handling of authentication failures with guidance
+
+### Net Validation
+- Commands now validate that nets exist before attempting operations
+- Wrong net type errors now list available nets of the correct type
+- Validation happens before confirmation prompts to avoid wasted time
+
+## <u>Bug Fixes</u>
+
+- Fixed spurious "WebSocket connection failed: 0" message when disconnecting from UART with Ctrl+C
+- Fixed webcam net creation failing with "Unexpected result format" error
+- Fixed webcam net type mapping (was using "camera" instead of "webcam")
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.14
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.14/)

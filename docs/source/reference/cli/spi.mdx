@@ -1,0 +1,369 @@
+---
+title: SPI
+description: Perform SPI data transfers
+---
+
+Perform SPI (Serial Peripheral Interface) data transfers with devices connected to a Lagerbox. SPI is a synchronous serial protocol using four lines: SCLK (clock), MOSI (master out), MISO (master in), and CS (chip select).
+
+## Syntax
+
+```bash
+lager spi [NETNAME] [OPTIONS] [SUBCOMMAND]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NETNAME` | SPI net name (optional if default is set via `lager defaults add --spi-net`) |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+
+When invoked without a subcommand, lists SPI nets on the box (or shows configuration for the specified net).
+
+---
+
+## Subcommands
+
+### `config`
+
+Configure SPI bus parameters. Settings persist across subsequent commands.
+
+```bash
+lager spi NETNAME config [OPTIONS]
+```
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--mode 0\|1\|2\|3` | SPI mode (clock polarity and phase) |
+| `--frequency FREQ` | Clock frequency (e.g., `1M`, `500k`, `5M`) |
+| `--bit-order msb\|lsb` | Bit order: MSB first or LSB first |
+| `--word-size 8\|16\|32` | Word size in bits |
+| `--cs-active low\|high` | Chip select active polarity |
+| `--cs-mode auto\|manual` | CS assertion mode: `auto` (hardware) or `manual` (user-managed GPIO) |
+
+**SPI Modes:**
+
+| Mode | CPOL | CPHA | Description |
+|------|------|------|-------------|
+| 0 | 0 | 0 | Clock idle low, data sampled on rising edge |
+| 1 | 0 | 1 | Clock idle low, data sampled on falling edge |
+| 2 | 1 | 0 | Clock idle high, data sampled on falling edge |
+| 3 | 1 | 1 | Clock idle high, data sampled on rising edge |
+
+**Examples:**
+
+```bash
+# Configure SPI mode 0 at 5MHz
+lager spi MY_SPI config --mode 0 --frequency 5M
+
+# Set 16-bit word size with LSB-first
+lager spi MY_SPI config --word-size 16 --bit-order lsb
+
+# Use manual CS mode (for Aardvark with separate GPIO for CS)
+lager spi MY_SPI config --cs-mode manual
+```
+
+---
+
+### `transfer`
+
+Perform a full-duplex SPI transfer. Sends data while simultaneously receiving response. If provided data is shorter than `NUM_WORDS`, the remaining words are padded with the fill value. If longer, data is truncated.
+
+```bash
+lager spi NETNAME transfer NUM_WORDS [OPTIONS]
+```
+
+| Argument | Description |
+|----------|-------------|
+| `NUM_WORDS` | Number of words to transfer |
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--box BOX` | Lagerbox name or IP address | |
+| `--data DATA` | Hex data to transmit (e.g., `0x9f01`) | |
+| `--data-file PATH` | File containing data to transmit | |
+| `--fill VALUE` | Fill value for padding | `0xFF` |
+| `--mode 0\|1\|2\|3` | SPI mode override | |
+| `--frequency FREQ` | Clock frequency override | |
+| `--bit-order msb\|lsb` | Bit order override | |
+| `--word-size 8\|16\|32` | Word size override | |
+| `--cs-active low\|high` | CS polarity override | |
+| `--keep-cs` | Keep CS asserted after transfer | `false` |
+| `--format FORMAT` | Output format: `hex`, `bytes`, `json` | `hex` |
+
+**Examples:**
+
+```bash
+# Read device ID: send 0x9F command, read 3 response bytes (4 words total)
+lager spi MY_SPI transfer --data 0x9f 4
+
+# Send data at 5MHz
+lager spi MY_SPI transfer --data "01 02 03 04" --frequency 5M 4
+
+# Output as JSON
+lager spi MY_SPI transfer --data 0x9f 4 --format json
+
+# Keep CS asserted for multi-part transfer
+lager spi MY_SPI transfer --data 0x03 --keep-cs 1
+```
+
+---
+
+### `read`
+
+Read data from an SPI slave device. Sends fill bytes while clocking in the response.
+
+```bash
+lager spi NETNAME read NUM_WORDS [OPTIONS]
+```
+
+| Argument | Description |
+|----------|-------------|
+| `NUM_WORDS` | Number of words to read |
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--box BOX` | Lagerbox name or IP address | |
+| `--fill VALUE` | Fill byte sent while reading | `0xFF` |
+| `--mode 0\|1\|2\|3` | SPI mode override | |
+| `--frequency FREQ` | Clock frequency override | |
+| `--bit-order msb\|lsb` | Bit order override | |
+| `--word-size 8\|16\|32` | Word size override | |
+| `--cs-active low\|high` | CS polarity override | |
+| `--keep-cs` | Keep CS asserted after transfer | `false` |
+| `--format FORMAT` | Output format: `hex`, `bytes`, `json` | `hex` |
+
+**Examples:**
+
+```bash
+# Read 5 bytes from SPI slave
+lager spi MY_SPI read 5
+
+# Read with 0x00 fill instead of default 0xFF
+lager spi MY_SPI read 5 --fill 0x00
+
+# Read 4 words at 16-bit word size
+lager spi MY_SPI read 4 --word-size 16
+```
+
+---
+
+### `write`
+
+Write data to an SPI slave device. Performs a full-duplex transfer and displays the received response.
+
+```bash
+lager spi NETNAME write DATA [OPTIONS]
+```
+
+| Argument | Description |
+|----------|-------------|
+| `DATA` | Hex data to write (e.g., `0x9f01020304`) |
+
+| Option | Description | Default |
+|--------|-------------|---------|
+| `--box BOX` | Lagerbox name or IP address | |
+| `--mode 0\|1\|2\|3` | SPI mode override | |
+| `--frequency FREQ` | Clock frequency override | |
+| `--bit-order msb\|lsb` | Bit order override | |
+| `--word-size 8\|16\|32` | Word size override | |
+| `--cs-active low\|high` | CS polarity override | |
+| `--keep-cs` | Keep CS asserted after transfer | `false` |
+| `--format FORMAT` | Output format: `hex`, `bytes`, `json` | `hex` |
+
+**Examples:**
+
+```bash
+# Send JEDEC ID command and read response
+lager spi MY_SPI write 0x9f01020304
+
+# Write with mode override
+lager spi MY_SPI write 0x0102 --mode 3
+
+# Write and keep CS low for continued transfer
+lager spi MY_SPI write 0x03000000 --keep-cs
+```
+
+---
+
+## Hex Data Formats
+
+Data arguments accept multiple hex formats. Parsing behavior depends on word size:
+
+**8-bit word size (default):**
+
+| Format | Example | Parsed As |
+|--------|---------|-----------|
+| Prefixed continuous | `0x9f01` | `[0x9f, 0x01]` |
+| Unprefixed continuous | `9f01` | `[0x9f, 0x01]` |
+| Space-separated | `9f 01 02` | `[0x9f, 0x01, 0x02]` |
+| Comma-separated | `9f,01,02` | `[0x9f, 0x01, 0x02]` |
+
+**16-bit or 32-bit word size:**
+
+| Format | Example | Parsed As |
+|--------|---------|-----------|
+| Continuous | `0x1234` | `[0x1234]` |
+| Space-separated | `0x1234 0x5678` | `[0x1234, 0x5678]` |
+
+Values are validated against the configured word size range.
+
+---
+
+## Fill Value Format
+
+The `--fill` option accepts hex or decimal values:
+
+| Format | Example | Value |
+|--------|---------|-------|
+| Hex prefixed | `0xff` | 255 |
+| Hex unprefixed | `ff` | 255 |
+| Decimal | `255` | 255 |
+
+---
+
+## Frequency Format
+
+Clock frequencies accept numeric values with optional suffixes:
+
+| Format | Example | Value |
+|--------|---------|-------|
+| Plain Hz | `1000000` | 1 MHz |
+| kHz suffix | `500k` | 500 kHz |
+| MHz suffix | `5M` | 5 MHz |
+| Hz suffix | `1000000hz` | 1 MHz |
+
+---
+
+## Supported Hardware
+
+| Adapter | Pins | CS Control | Notes |
+|---------|------|------------|-------|
+| LabJack T7 | Configurable FIO pins (e.g., FIO0-FIO3) | Manual GPIO | ~450 kHz max (throttle=0); CS managed via GPIO writes |
+| Aardvark USB | Fixed MOSI/MISO/SCK/SS | Hardware or manual | Up to 8 MHz |
+| FT232H | Configurable | MPSSE-based | FTDI MPSSE SPI |
+
+---
+
+## Net Configuration
+
+SPI nets are configured in `saved_nets.json` on the box. Example net record:
+
+```json
+{
+  "name": "my_spi",
+  "role": "spi",
+  "instrument": "labjack_t7",
+  "pin": "FIO0-FIO3",
+  "params": {
+    "cs_pin": 0,
+    "clk_pin": 1,
+    "mosi_pin": 2,
+    "miso_pin": 3,
+    "mode": 0,
+    "frequency_hz": 1000000,
+    "word_size": 8,
+    "bit_order": "msb"
+  }
+}
+```
+
+For Aardvark adapters:
+
+```json
+{
+  "name": "my_spi",
+  "role": "spi",
+  "instrument": "aardvark",
+  "pin": "SPI0",
+  "params": {
+    "mode": 0,
+    "frequency_hz": 1000000,
+    "word_size": 8,
+    "bit_order": "msb"
+  }
+}
+```
+
+---
+
+## Output Formats
+
+| Format | Description |
+|--------|-------------|
+| `hex` | Space-separated hex values (e.g., `9f 01 02`) |
+| `bytes` | Raw byte values |
+| `json` | JSON object with data array and metadata |
+
+---
+
+## Examples
+
+```bash
+# List all SPI nets on a box
+lager spi --box my-lager-box
+
+# Show configuration for a specific net
+lager spi MY_SPI --box my-lager-box
+
+# Configure SPI mode and speed
+lager spi MY_SPI config --mode 0 --frequency 5M
+
+# Read flash JEDEC ID (send 0x9F command, read 3 bytes)
+lager spi MY_SPI transfer --data 0x9f 4
+
+# Read 256 bytes from flash
+lager spi MY_SPI read 256
+
+# Write a command byte
+lager spi MY_SPI write 0x06
+
+# Multi-step transfer with CS held low
+lager spi MY_SPI write 0x03 --keep-cs
+lager spi MY_SPI read 4
+```
+
+---
+
+## Troubleshooting
+
+### No Response from Device
+
+- Verify MOSI, MISO, SCLK, and CS wiring
+- Check SPI mode matches the device datasheet
+- Confirm CS polarity (`--cs-active low` for most devices)
+- Try reducing frequency with `--frequency 100k`
+
+### Garbled Data
+
+- Verify SPI mode (CPOL/CPHA) matches the device
+- Check bit order (MSB vs LSB first)
+- Ensure word size matches the device protocol
+
+### CS Pin Not Working (LabJack T7)
+
+- LabJack T7 uses manual GPIO-based CS control
+- The driver automatically asserts/deasserts CS via GPIO writes
+- Verify the `cs_pin` in the net configuration matches your wiring
+
+---
+
+## Notes
+
+- Default SPI net can be set with `lager defaults add --spi-net NETNAME`
+- LabJack T7 operates at ~450 kHz regardless of requested frequency due to hardware limitations
+- SPI is full-duplex: data is always sent and received simultaneously
+- Use `--keep-cs` for multi-part transactions that require CS to stay asserted
+- Configuration set via `config` persists across subsequent `transfer`/`read`/`write` commands
+
+## See Also
+
+- [I2C](/source/reference/cli/i2c) -- I2C bus communication (the other common serial protocol)
+- [Python SPI API](/source/reference/python/spi) -- Automate SPI operations in Python scripts
+- [Glossary](/source/getting-started/glossary) -- Definitions of SPI, I2C, and other terms

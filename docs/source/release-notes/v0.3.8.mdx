@@ -1,0 +1,42 @@
+---
+title: "Version 0.3.8"
+description: "January 15, 2026"
+---
+
+## <u>Features</u>
+
+### Connection Manager for VISA Instruments
+- Added global connection manager that coordinates VISA instrument connections across dispatchers
+- Prevents "Resource busy" errors when the same physical device is accessed by multiple dispatchers
+- Enables seamless switching between power supply and battery simulator modes on devices like the Keithley 2281S
+
+### Test Result Infrastructure
+- New `TestResult` schema for structured test data capture from `lager python` executions
+- Support for saving results to file in JSON, JSONL, or CSV formats
+- Webhook integration for posting test results to external services
+- Rich metadata support including device info, measurements, and execution context
+
+## <u>Improvements</u>
+
+### Power Module Return Values
+- Power supply and battery drivers now return numeric values when reading voltage/current
+- Enables programmatic access to measurement values in addition to console output
+- Updated Keithley, Keysight, EA, and Rigol drivers with consistent return value behavior
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.8
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.8/)

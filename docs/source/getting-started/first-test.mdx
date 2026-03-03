@@ -1,0 +1,191 @@
+---
+title: Your First Test
+description: A complete walkthrough of testing a device with Lager
+---
+
+This guide walks you through a complete test workflow -- from verifying connectivity to running an automated Python script. By the end, you'll have used the CLI interactively and written your first Lager test script.
+
+<Note>
+This tutorial assumes you have completed the [Getting Started](/source/getting-started/overview) guide: the CLI is installed, your box is added, and your instruments are configured with nets.
+</Note>
+
+---
+
+## Part 1: CLI Walkthrough
+
+Let's step through a typical test flow using individual CLI commands. This is useful for ad-hoc testing, debugging, and getting familiar with your setup.
+
+### Step 1: Verify your box is online
+
+```bash
+lager hello --box my-lager-box
+```
+
+**Expected output:**
+```
+my-lager-box says hello!
+```
+
+### Step 2: Check connected instruments
+
+```bash
+lager instruments --box my-lager-box
+```
+
+This shows all instruments the box can see. Confirm your power supply, debug probe, and any other instruments appear.
+
+### Step 3: View your configured nets
+
+```bash
+lager nets --box my-lager-box
+```
+
+This shows the named nets you'll use in subsequent commands. Note the net names -- you'll need them below.
+
+### Step 4: Set defaults to reduce typing
+
+```bash
+lager defaults add --box my-lager-box
+lager defaults add --supply-net POWER
+lager defaults add --debug-net DEBUG_NET
+```
+
+With defaults set, you can omit `--box` and net names from subsequent commands.
+
+### Step 5: Flash firmware
+
+```bash
+lager debug flash --hex firmware.hex
+```
+
+**Expected output:**
+```
+Flashing firmware.hex to target...
+Flash complete. 32768 bytes written.
+```
+
+### Step 6: Power on your device
+
+```bash
+# Set voltage with protection thresholds
+lager supply voltage 3.3 --ovp 3.6 --ocp 0.5 --yes
+
+# Enable the output
+lager supply enable --yes
+```
+
+### Step 7: Take a measurement
+
+```bash
+lager adc SENSOR_1
+```
+
+**Expected output:**
+```
+ADC 'SENSOR_1': 2.450000 V
+```
+
+### Step 8: Power down
+
+```bash
+lager supply disable --yes
+```
+
+Always disable power supplies when you're done testing.
+
+---
+
+## Part 2: Your First Python Script
+
+Now let's convert the manual CLI steps into a repeatable Python script. The key advantage of a script is that it always cleans up after itself (disabling power) even if an error occurs.
+
+Create a file called `my_first_test.py`:
+
+```python
+from lager import Net, NetType
+
+def main():
+    # Get our nets
+    psu = Net.get('POWER', type=NetType.PowerSupply)
+    debug = Net.get('DEBUG_NET', type=NetType.Debug)
+    sensor = Net.get('SENSOR_1', type=NetType.ADC)
+
+    try:
+        # Flash firmware
+        print("Flashing firmware...")
+        debug.connect()
+        debug.flash(['firmware.hex'])
+        debug.reset()
+        print("Flash complete.")
+
+        # Power on the DUT
+        print("Enabling power supply at 3.3V...")
+        psu.set_voltage(3.3)
+        psu.set_current(0.5)
+        psu.enable()
+        print("Power enabled.")
+
+        # Take a measurement
+        voltage = sensor.input()
+        print(f"Sensor reading: {voltage:.4f} V")
+
+        # Check the result
+        if 2.0 <= voltage <= 3.0:
+            print("PASS: Sensor voltage within expected range.")
+        else:
+            print(f"FAIL: Sensor voltage {voltage:.4f}V outside range [2.0, 3.0]")
+
+    finally:
+        # Always clean up, even if an error occurs
+        print("Disabling power supply...")
+        psu.disable()
+        print("Done.")
+
+if __name__ == '__main__':
+    main()
+```
+
+<Note>
+The `try/finally` block ensures the power supply is always disabled, even if the script encounters an error. This is important for protecting your hardware.
+</Note>
+
+---
+
+## Part 3: Running It
+
+Execute the script on your Lager Box:
+
+```bash
+lager python my_first_test.py --box my-lager-box
+```
+
+**Expected output:**
+```
+Flashing firmware...
+Flash complete.
+Enabling power supply at 3.3V...
+Power enabled.
+Sensor reading: 2.4500 V
+PASS: Sensor voltage within expected range.
+Disabling power supply...
+Done.
+```
+
+If you need to send additional files along with your script (firmware binaries, config files), use `--add-file`:
+
+```bash
+lager python my_first_test.py --box my-lager-box --add-file firmware.hex
+```
+
+---
+
+## What's Next
+
+You've completed your first test with Lager. Here are some directions to explore:
+
+- **[CLI Reference](/source/reference/cli/overview)** -- Full documentation for every CLI command
+- **[Python API](/source/reference/python/overview)** -- Complete Python SDK reference
+- **[Troubleshooting](/source/getting-started/troubleshooting)** -- Solutions when things go wrong
+- **[Glossary](/source/getting-started/glossary)** -- Definitions for technical terms used in the docs
+
+For a more comprehensive automation example combining robot arm control, USB hub power cycling, debug probe flashing, and ADC measurement, see the [demo script](https://github.com/lagerdata/lager/blob/main/docs/examples/demo_script.py).

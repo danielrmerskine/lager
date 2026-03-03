@@ -1,0 +1,278 @@
+---
+title: Electronic Load
+description: Control electronic load nets
+---
+
+Control electronic loads to sink current in various modes for testing power systems.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+The Net-based API provides methods that can either get or set values. When called without a value parameter, methods read and return the current value. When called with a value, they set it.
+
+| Method | Description |
+|--------|-------------|
+| `mode(mode_type)` | Set or read operation mode (CC/CV/CR/CW) |
+| `current(value)` | Set or read constant current (A) |
+| `voltage(value)` | Set or read constant voltage (V) |
+| `resistance(value)` | Set or read constant resistance (ohms) |
+| `power(value)` | Set or read constant power (W) |
+| `enable()` | Enable electronic load input |
+| `disable()` | Disable electronic load input |
+| `print_state()` | Print comprehensive state |
+| `measured_voltage()` | Read measured voltage (returns float) |
+| `measured_current()` | Read measured current (returns float) |
+| `measured_power()` | Read measured power (returns float) |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.ELoad)`
+
+Get an electronic load net by name.
+
+```python
+from lager import Net, NetType
+
+eload = Net.get('LOAD', type=NetType.ELoad)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the electronic load net |
+| `type` | `NetType` | Must be `NetType.ELoad` |
+
+**Returns:** Electronic load Net instance
+
+### `mode(mode_type=None)`
+
+Set or read the operation mode.
+
+```python
+# Set mode
+eload.mode('CC')  # Constant Current
+eload.mode('CV')  # Constant Voltage
+eload.mode('CR')  # Constant Resistance
+eload.mode('CW')  # Constant Power (also 'CP')
+
+# Read current mode
+current_mode = eload.mode()
+print(f"Mode: {current_mode}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `mode_type` | `str` or `None` | 'CC', 'CV', 'CR', or 'CW'/'CP'. If None, reads current mode. |
+
+**Returns:** Current mode string if `mode_type` is None
+
+### `current(value=None)`
+
+Set or read the constant current setting.
+
+```python
+# Set CC mode current
+eload.mode('CC')
+eload.current(0.5)  # Set to 500mA
+
+# Read current setting
+i = eload.current()
+print(f"Current setting: {i}A")
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `value` | `float` or `None` | Current in amps. If None, reads current setting. |
+
+**Returns:** Current setting in amps if `value` is None
+
+### `voltage(value=None)`
+
+Set or read the constant voltage setting.
+
+```python
+# Set CV mode voltage
+eload.mode('CV')
+eload.voltage(5.0)  # Set to 5V
+
+# Read voltage setting
+v = eload.voltage()
+print(f"Voltage setting: {v}V")
+```
+
+### `resistance(value=None)`
+
+Set or read the constant resistance setting. Values below 0.02 ohms are at the minimum range limit of the instrument and may be clamped. A warning is printed if the applied value differs from the requested value.
+
+```python
+# Set CR mode resistance
+eload.mode('CR')
+eload.resistance(100.0)  # Set to 100 ohms
+
+# Read resistance setting
+r = eload.resistance()
+print(f"Resistance setting: {r} ohms")
+```
+
+### `power(value=None)`
+
+Set or read the constant power setting.
+
+```python
+# Set CW mode power
+eload.mode('CW')
+eload.power(5.0)  # Set to 5W
+
+# Read power setting
+p = eload.power()
+print(f"Power setting: {p}W")
+```
+
+### `enable()` / `disable()`
+
+Enable or disable the electronic load input.
+
+```python
+eload.enable()   # Start sinking current
+eload.disable()  # Stop sinking current
+```
+
+### `print_state()`
+
+Print comprehensive electronic load state.
+
+```python
+eload.print_state()
+# Prints: mode, current/voltage/resistance/power settings, measured values, input state
+```
+
+### `measured_voltage()` / `measured_current()` / `measured_power()`
+
+Read actual measured values (return floats, for use in code).
+
+```python
+v = eload.measured_voltage()  # Returns measured voltage
+i = eload.measured_current()  # Returns measured current
+p = eload.measured_power()    # Returns measured power
+
+print(f"V={v:.2f}V, I={i:.3f}A, P={p:.3f}W")
+```
+
+**Returns:** `float` - Measured value
+
+## Load Modes
+
+| Mode | Code | Description |
+|------|------|-------------|
+| Constant Current | `CC` | Sinks a fixed current regardless of voltage |
+| Constant Voltage | `CV` | Maintains a fixed voltage across the load |
+| Constant Resistance | `CR` | Behaves as a fixed resistance |
+| Constant Power | `CW` or `CP` | Dissipates a fixed power |
+
+## Examples
+
+### Constant Current Test
+
+```python
+from lager import Net, NetType
+
+eload = Net.get('LOAD', type=NetType.ELoad)
+
+# Configure constant current mode at 500mA
+eload.mode('CC')
+eload.current(0.5)
+
+eload.enable()
+
+# Read measurements
+print(f"Voltage: {eload.measured_voltage():.2f}V")
+print(f"Current: {eload.measured_current():.3f}A")
+print(f"Power: {eload.measured_power():.3f}W")
+
+eload.disable()
+```
+
+### Battery Discharge Test
+
+```python
+from lager import Net, NetType
+import time
+
+eload = Net.get('LOAD', type=NetType.ELoad)
+
+# Configure constant resistance load
+eload.mode('CR')
+eload.resistance(10.0)
+
+eload.enable()
+
+# Monitor discharge
+for i in range(30):
+    v = eload.measured_voltage()
+    i_curr = eload.measured_current()
+    print(f"V={v:.2f}V, I={i_curr:.3f}A")
+
+    if v < 3.0:
+        print("Discharge cutoff reached")
+        break
+
+    time.sleep(1)
+
+eload.disable()
+```
+
+### Power Efficiency Test
+
+```python
+from lager import Net, NetType
+
+# Input power supply
+psu = Net.get('INPUT', type=NetType.PowerSupply)
+psu.voltage(12.0)
+psu.current(2.0)
+psu.enable()
+
+# Output load
+eload = Net.get('OUTPUT', type=NetType.ELoad)
+eload.mode('CC')
+eload.current(0.5)
+eload.enable()
+
+# Measure efficiency
+p_in = 12.0 * psu.measured_current()  # Input power
+p_out = eload.measured_power()         # Output power
+efficiency = (p_out / p_in) * 100 if p_in > 0 else 0
+
+print(f"Input: {p_in:.2f}W")
+print(f"Output: {p_out:.2f}W")
+print(f"Efficiency: {efficiency:.1f}%")
+
+eload.disable()
+psu.disable()
+```
+
+## Supported Hardware
+
+| Manufacturer | Model | Features |
+|--------------|-------|----------|
+| Rigol | DL3021 (DL3000 series) | CC/CV/CR/CP modes |
+
+## Notes
+
+- Use `mode()` to set the operation mode before setting the corresponding value
+- Methods like `current()`, `voltage()`, `resistance()`, `power()` can get or set values
+- `measured_voltage()`, `measured_current()`, `measured_power()` return actual measurements
+- `print_state()` prints state (for debugging), measurement methods return values (for code)
+- Always call `enable()` to start sinking current
+- Always call `disable()` when finished
+- Resistance values below 0.02 ohms may be clamped by the instrument

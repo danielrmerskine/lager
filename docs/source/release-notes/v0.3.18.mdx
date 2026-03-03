@@ -1,0 +1,43 @@
+---
+title: "Version 0.3.18"
+description: "January 30, 2026"
+---
+
+## <u>Features</u>
+
+### JLinkScript Stored with Debug Nets
+- JLinkScript files can now be stored directly with debug nets on the Lager Box, eliminating the need to configure the `.lager` DEBUG section or re-send the script on every connect
+- Once attached via `--jlink-script` on `lager nets create` or the new `lager nets set-script` command, the script is used automatically for connect, flash, erase, and reset operations
+- New `lager nets set-script <net> <script-path>` command to attach a JLinkScript to an existing debug net
+- New `lager nets remove-script <net>` command to remove a JLinkScript from a debug net
+
+## <u>Bug Fixes</u>
+
+### Power Supply Python API Reliability
+- Fixed an issue where VISA sessions would go stale after extended use, causing `DeviceError` when calling power supply methods (e.g., `disable()`, `voltage()`) via the Python API
+- The Keysight E36000 resource cache now validates connections before reuse and automatically reconnects on stale sessions
+- ResourceManager references are now preserved across all power supply drivers (Keysight, Rigol, Keithley, EA) to prevent garbage collection from invalidating active session handles
+- The hardware service now automatically detects and retries on stale VISA session errors instead of returning failures
+
+## <u>Improvements</u>
+
+### Lager Box Update Timeouts
+- Increased SSH timeout during `lager update` to prevent timeouts when entering passwords on slower connections
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.18
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.18/)

@@ -1,0 +1,185 @@
+---
+title: GPI
+description: Read GPIO input state
+---
+
+Read the digital input state of GPIO pins, with optional blocking wait for a target level.
+
+## Syntax
+
+```bash
+lager gpi [NETNAME] [OPTIONS]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NETNAME` | GPIO net name (optional if default is set). If omitted, lists all available GPIO nets. |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--wait-for LEVEL` | Block until pin reaches this level (`high`, `low`, `1`, or `0`) |
+| `--timeout SECONDS` | Timeout in seconds for `--wait-for` (default: wait forever) |
+| `--scan-rate HZ` | LabJack streaming sample rate in Hz (advanced) |
+| `--scans-per-read N` | LabJack scans per read batch (advanced) |
+| `--poll-interval SECONDS` | Poll interval in seconds for non-streaming drivers (advanced) |
+
+---
+
+## Usage
+
+### Basic Read
+
+```bash
+# Read input state
+lager gpi BUTTON1 --box my-lager-box
+
+# Using default net
+lager gpi
+
+# List available GPIO nets (omit net name)
+lager gpi --box my-lager-box
+```
+
+### Wait for Level
+
+Block until a pin reaches a target level. Useful for waiting on hardware events like button presses, interrupt lines, or device ready signals.
+
+```bash
+# Wait for pin to go high
+lager gpi BUTTON1 --wait-for high --box my-lager-box
+
+# Wait for pin to go low with 10-second timeout
+lager gpi INT_PIN --wait-for low --timeout 10
+
+# Wait for rising edge (pin goes to 1)
+lager gpi READY --wait-for 1 --timeout 30
+```
+
+### Advanced Streaming Options
+
+For LabJack T7 hardware, the `--wait-for` command uses high-speed streaming to detect level changes. You can tune the streaming parameters:
+
+```bash
+# Custom scan rate (default varies by driver)
+lager gpi TRIGGER --wait-for high --scan-rate 10000 --timeout 5
+
+# Custom scans per read batch
+lager gpi TRIGGER --wait-for high --scan-rate 5000 --scans-per-read 500
+
+# For non-streaming drivers, adjust poll interval
+lager gpi BUTTON --wait-for low --poll-interval 0.05 --timeout 10
+```
+
+---
+
+## Output
+
+### Basic Read
+
+Returns the digital state:
+- `0` - Low (0V)
+- `1` - High (3.3V or 5V depending on hardware)
+
+```bash
+$ lager gpi BUTTON1
+1
+```
+
+### Wait for Level
+
+Returns the elapsed time in seconds when the target level is reached:
+
+```bash
+$ lager gpi INT_PIN --wait-for low --timeout 10
+Pin reached LOW after 2.34s
+```
+
+If the timeout expires before the target level is reached, the command exits with an error.
+
+---
+
+## Supported Hardware
+
+| Device | Pins | Voltage | Wait-for Method |
+|--------|------|---------|-----------------|
+| LabJack T7 | FIO0-FIO7 | 3.3V logic | Streaming (high-speed) |
+| MCC USB-202 | DIO0-DIO7 (0-7) | 3.3V/5V TTL | Polling |
+| Aardvark | 0-5 (SCL, SDA, MISO, SCK, MOSI, SS) | 3.3V | Polling |
+| FT232H | 0-15 (AD0-AD7, AC0-AC7) | 3.3V | Polling |
+
+<Note>
+Aardvark and FT232H GPIO support is currently disabled and may be re-enabled in a future release. LabJack T7 and MCC USB-202 are the active GPIO backends.
+</Note>
+
+### Aardvark Pin Mapping
+
+The Aardvark I2C/SPI adapter exposes 6 GPIO pins on its 10-pin header. Pins can be specified by number or signal name:
+
+| Pin | Name | Header Pin |
+|-----|------|------------|
+| 0 | SCL | 1 |
+| 1 | SDA | 3 |
+| 2 | MISO | 5 |
+| 3 | SCK | 7 |
+| 4 | MOSI | 8 |
+| 5 | SS | 9 |
+
+### FT232H Pin Mapping
+
+The FT232H provides 16 GPIO pins across two ports:
+
+| Pins | Names | Description |
+|------|-------|-------------|
+| 0-7 | AD0-AD7 | Port A data pins |
+| 8-15 | AC0-AC7 | Port A control pins |
+
+---
+
+## Examples
+
+```bash
+# Check if button is pressed
+STATE=$(lager gpi BUTTON1 --box lab-gw)
+if [ "$STATE" -eq "1" ]; then
+    echo "Button pressed"
+fi
+
+# Read multiple inputs
+lager gpi BUTTON1 --box lab-gw
+lager gpi SENSOR_INT --box lab-gw
+lager gpi FAULT_PIN --box lab-gw
+
+# Wait for device ready signal
+lager gpi READY_PIN --wait-for high --timeout 30 --box lab-gw
+
+# Wait for interrupt (active-low)
+lager gpi INT_N --wait-for low --timeout 5 --box lab-gw
+
+# Scripted: wait for button press, then proceed
+echo "Press the button..."
+lager gpi BUTTON --wait-for high --timeout 60 --box lab-gw && echo "Button pressed!"
+```
+
+---
+
+## Related Commands
+
+- [`lager gpo`](/source/reference/cli/gpo) - Set GPIO output level
+
+---
+
+## Notes
+
+- GPI is for reading input pins only
+- Use `lager gpo` to set output pins
+- Default net can be set with `lager defaults add --gpio-net`
+- Pin must be configured as input in net configuration
+- USB-202 channels can be specified as `0`-`7` or `DIO0`-`DIO7`
+- `--wait-for` blocks the process until the target level is detected or the timeout expires
+- `--scan-rate` and `--scans-per-read` only apply to LabJack T7 streaming; they are ignored by other drivers
+- `--poll-interval` applies to non-streaming drivers (USB-202, Aardvark, FT232H); ignored by LabJack

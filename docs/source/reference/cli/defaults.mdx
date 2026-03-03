@@ -1,0 +1,220 @@
+---
+title: Defaults
+description: Manage default settings for CLI commands
+---
+
+Set default values for Lager Box, nets, and other CLI options to simplify commands.
+
+## Syntax
+
+```bash
+lager defaults COMMAND [OPTIONS]
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `add` | Set default values |
+| `list` | List current default settings |
+| `delete` | Delete specific default settings |
+| `delete-all` | Delete all default settings |
+
+---
+
+## Command Reference
+
+### `add`
+
+Set default values for various options.
+
+```bash
+lager defaults add [OPTIONS]
+```
+
+**Lager Box Options:**
+- `--box BOX` - Set default Lager Box
+
+**Net Options:**
+- `--supply-net NAME` - Default power supply net
+- `--battery-net NAME` - Default battery net
+- `--solar-net NAME` - Default solar net
+- `--scope-net NAME` - Default oscilloscope net
+- `--logic-net NAME` - Default logic analyzer net
+- `--adc-net NAME` - Default ADC net
+- `--dac-net NAME` - Default DAC net
+- `--gpio-net NAME` - Default GPIO net
+- `--debug-net NAME` - Default debug net
+- `--eload-net NAME` - Default electronic load net
+- `--usb-net NAME` - Default USB hub net
+- `--webcam-net NAME` - Default webcam net
+- `--watt-meter-net NAME` - Default watt meter net
+- `--thermocouple-net NAME` - Default thermocouple net
+- `--uart-net NAME` - Default UART net
+- `--arm-net NAME` - Default robotic arm net
+- `--i2c-net NAME` - Default I2C bus net
+- `--spi-net NAME` - Default SPI bus net
+
+**Other Options:**
+- `--serial-port PATH` - Default serial port path
+
+**Examples:**
+```bash
+# Set default Lager Box
+lager defaults add --box lab-lager-box
+
+# Set default power supply net
+lager defaults add --supply-net VDD_MAIN
+
+# Set multiple defaults at once
+lager defaults add --box lab-lager-box --supply-net POWER --debug-net DEBUG_SWD
+
+# Set defaults for I2C and SPI buses
+lager defaults add --i2c-net I2C_SENSORS --spi-net SPI_FLASH
+```
+
+### `list`
+
+Display all current default settings.
+
+```bash
+lager defaults list
+```
+
+Output:
+```
+Current defaults:
+  box: lab-lager-box
+  supply-net: VDD_MAIN
+  battery-net: VBAT
+  debug-net: DEBUG_SWD
+  serial-port: /dev/ttyUSB0
+```
+
+### `delete`
+
+Delete specific default settings. The `delete` command has subcommands for each type of default.
+
+```bash
+lager defaults delete SUBCOMMAND [OPTIONS]
+```
+
+**Available subcommands:**
+- `box` - Delete default Lager Box
+- `serial-port` - Delete default serial port
+- `supply-net` - Delete default supply net
+- `battery-net` - Delete default battery net
+- `solar-net` - Delete default solar net
+- `scope-net` - Delete default scope net
+- `logic-net` - Delete default logic analyzer net
+- `adc-net` - Delete default ADC net
+- `dac-net` - Delete default DAC net
+- `gpio-net` - Delete default GPIO net
+- `debug-net` - Delete default debug net
+- `eload-net` - Delete default electronic load net
+- `usb-net` - Delete default USB hub net
+- `webcam-net` - Delete default webcam net
+- `watt-meter-net` - Delete default watt meter net
+- `thermocouple-net` - Delete default thermocouple net
+- `uart-net` - Delete default UART net
+- `arm-net` - Delete default robotic arm net
+- `i2c-net` - Delete default I2C net
+- `spi-net` - Delete default SPI net
+
+**Options (for all subcommands):**
+- `--yes` - Skip confirmation prompt
+
+**Examples:**
+```bash
+# Delete default Lager Box
+lager defaults delete box
+
+# Delete default supply net without confirmation
+lager defaults delete supply-net --yes
+
+# Delete default serial port
+lager defaults delete serial-port
+```
+
+### `delete-all`
+
+Delete all default settings.
+
+```bash
+lager defaults delete-all
+```
+
+---
+
+## How Defaults Work
+
+When you run a command without specifying an option, the CLI checks for a default:
+
+```bash
+# Without defaults - must specify everything
+lager supply VDD_MAIN voltage 3.3 --box lab-lager-box
+
+# With defaults set
+lager defaults add --box lab-lager-box --supply-net VDD_MAIN
+
+# Now you can simply run
+lager supply voltage 3.3
+```
+
+---
+
+## Default Resolution Order
+
+1. Command-line option (highest priority)
+2. Default setting from `lager defaults`
+3. Error if required and no default
+
+---
+
+## Configuration Storage
+
+Defaults are stored in the `.lager` configuration file:
+
+```ini
+[LAGER]
+default_lager_box = lab-lager-box
+default_supply_net = VDD_MAIN
+default_battery_net = VBAT
+default_serial_port = /dev/ttyUSB0
+net_i2c = I2C_SENSORS
+net_spi = SPI_FLASH
+```
+
+---
+
+## Workflow Example
+
+```bash
+# Initial setup - set your common defaults
+lager defaults add --box my-bench
+lager defaults add --supply-net POWER
+lager defaults add --debug-net SWD
+lager defaults add --uart-net SERIAL
+lager defaults add --i2c-net I2C_BUS
+lager defaults add --spi-net SPI_BUS
+
+# Now commands are simpler
+lager supply voltage 3.3          # Uses POWER net on my-bench
+lager debug flash fw.hex          # Uses SWD net on my-bench
+lager uart --interactive          # Uses SERIAL net on my-bench
+lager i2c scan                    # Uses I2C_BUS net on my-bench
+lager spi transfer 0xDE 0xAD     # Uses SPI_BUS net on my-bench
+
+# Override defaults when needed
+lager supply OTHER_SUPPLY voltage 5.0
+lager debug flash fw.hex --box other-lager-box
+```
+
+---
+
+## Notes
+
+- Defaults are per-project (stored in `./.lager`)
+- Net names must match configured nets on the Lager Box
+- Box names are validated against saved boxes
+- Use `lager defaults list` to verify current settings

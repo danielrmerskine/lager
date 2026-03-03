@@ -1,0 +1,11 @@
+# User-installed packages via lager pip
+# This file is managed by lager pip install/uninstall commands
+# Add your custom packages below (one per line with optional version specifier)
+#
+# Examples:
+#   pandas==2.0.0
+#   numpy
+#   scipy>=1.10.0
+
+numpy
+scipy

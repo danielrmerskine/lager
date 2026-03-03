@@ -1,0 +1,370 @@
+---
+title: Webcam
+description: Webcam streaming and video capture for visual inspection
+---
+
+Stream video from webcams attached to the Lager Box for visual inspection, automated vision testing, and remote monitoring.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `start(box_ip)` | Start a webcam stream |
+| `stop()` | Stop the webcam stream |
+| `get_info(box_ip)` | Get info about the stream |
+| `get_url(box_ip)` | Get just the URL for the stream |
+| `is_active()` | Check if stream is currently active |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.Webcam)`
+
+Get a webcam net by name.
+
+```python
+from lager import Net, NetType
+
+webcam = Net.get('camera1', type=NetType.Webcam)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the webcam net |
+| `type` | `NetType` | Must be `NetType.Webcam` |
+
+**Returns:** Webcam Net instance
+
+### `start(box_ip)`
+
+Start a webcam video stream.
+
+```python
+from lager import Net, NetType
+
+webcam = Net.get('camera1', type=NetType.Webcam)
+result = webcam.start(box_ip='<BOX_IP>')
+
+print(f"Stream URL: {result['url']}")
+print(f"Port: {result['port']}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `box_ip` | `str` | Lager Box IP address for URL generation |
+
+**Returns:** `dict` with keys:
+- `url` - Full stream URL (e.g., `http://<BOX_IP>:8081/`)
+- `port` - Port number for the stream
+- `already_running` - Boolean indicating if stream was already active
+
+**Raises:** `RuntimeError` if device is already in use or not found
+
+### `stop()`
+
+Stop the webcam stream.
+
+```python
+from lager import Net, NetType
+
+webcam = Net.get('camera1', type=NetType.Webcam)
+stopped = webcam.stop()
+
+if stopped:
+    print("Stream stopped")
+else:
+    print("Stream was not running")
+```
+
+**Returns:** `bool` - True if stopped successfully, False if not running
+
+### `get_info(box_ip)`
+
+Get information about the stream.
+
+```python
+from lager import Net, NetType
+
+webcam = Net.get('camera1', type=NetType.Webcam)
+info = webcam.get_info(box_ip='<BOX_IP>')
+
+if info:
+    print(f"URL: {info['url']}")
+    print(f"Port: {info['port']}")
+    print(f"Device: {info['video_device']}")
+else:
+    print("Stream not active")
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `box_ip` | `str` | Lager Box IP address |
+
+**Returns:** `dict` or `None` - Stream info dict or None if not running
+
+### `get_url(box_ip)`
+
+Get just the URL for the stream.
+
+```python
+from lager import Net, NetType
+
+webcam = Net.get('camera1', type=NetType.Webcam)
+url = webcam.get_url(box_ip='<BOX_IP>')
+
+if url:
+    print(f"Stream at: {url}")
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `box_ip` | `str` | Lager Box IP address |
+
+**Returns:** `str` or `None` - Stream URL or None if not running
+
+### `is_active()`
+
+Check if the stream is currently active.
+
+```python
+from lager import Net, NetType
+
+webcam = Net.get('camera1', type=NetType.Webcam)
+if webcam.is_active():
+    print("Stream is running")
+else:
+    print("Stream is stopped")
+```
+
+**Returns:** `bool` - True if stream is running, False otherwise
+
+## Examples
+
+### Start Multiple Cameras
+
+```python
+from lager import Net, NetType
+
+# Lager Box IP
+BOX_IP = '<BOX_IP>'
+
+# Start multiple camera streams
+cameras = ['overview', 'microscope', 'solder_station']
+
+for name in cameras:
+    try:
+        webcam = Net.get(name, type=NetType.Webcam)
+        result = webcam.start(BOX_IP)
+        print(f"{name}: {result['url']}")
+    except RuntimeError as e:
+        print(f"{name}: Failed - {e}")
+```
+
+### Stream Management
+
+```python
+from lager import Net, NetType
+
+BOX_IP = '<BOX_IP>'
+
+def start_camera(name):
+    """Start a camera stream."""
+    try:
+        webcam = Net.get(name, type=NetType.Webcam)
+        result = webcam.start(BOX_IP)
+        if result['already_running']:
+            print(f"Stream '{name}' was already running at {result['url']}")
+        else:
+            print(f"Started '{name}' at {result['url']}")
+    except RuntimeError as e:
+        print(f"Failed to start '{name}': {e}")
+
+def stop_camera(name):
+    """Stop a camera stream."""
+    webcam = Net.get(name, type=NetType.Webcam)
+    if webcam.stop():
+        print(f"Stopped '{name}'")
+    else:
+        print(f"Stream '{name}' was not running")
+
+def check_camera(name):
+    """Check camera status."""
+    webcam = Net.get(name, type=NetType.Webcam)
+    if webcam.is_active():
+        info = webcam.get_info(BOX_IP)
+        print(f"{name}: Running at {info['url']}")
+    else:
+        print(f"{name}: Stopped")
+
+# Usage
+start_camera('main')
+check_camera('main')
+stop_camera('main')
+```
+
+### Visual Inspection Test
+
+```python
+from lager import Net, NetType
+import time
+
+BOX_IP = '<BOX_IP>'
+
+def visual_inspection_test(camera_name, inspection_callback):
+    """
+    Start camera stream and wait for operator inspection.
+
+    Args:
+        camera_name: Webcam net name
+        inspection_callback: Function to handle the stream URL
+
+    Returns:
+        bool: True if inspection passed
+    """
+    # Start stream
+    webcam = Net.get(camera_name, type=NetType.Webcam)
+    result = webcam.start(BOX_IP)
+    stream_url = result['url']
+
+    print(f"Visual inspection stream: {stream_url}")
+
+    # Notify external system (could open browser, send to UI, etc.)
+    inspection_callback(stream_url)
+
+    # Wait for inspection (in real usage, this would wait for operator input)
+    print("Waiting for visual inspection...")
+    time.sleep(10)  # Placeholder
+
+    # Stop stream
+    webcam.stop()
+
+    # Return result (would come from operator in real usage)
+    return True
+
+# Usage
+def handle_url(url):
+    print(f"Open in browser: {url}")
+
+result = visual_inspection_test('inspection_cam', handle_url)
+print(f"Inspection result: {'PASS' if result else 'FAIL'}")
+```
+
+### Camera Discovery and Testing
+
+```python
+from lager import Net, NetType
+import os
+
+BOX_IP = '<BOX_IP>'
+
+def discover_cameras():
+    """Find all available video devices."""
+    cameras = []
+    for i in range(10):  # Check video0 through video9
+        device = f'/dev/video{i}'
+        if os.path.exists(device):
+            cameras.append(device)
+    return cameras
+
+def test_camera(net_name):
+    """Test if a camera net works."""
+    try:
+        webcam = Net.get(net_name, type=NetType.Webcam)
+        result = webcam.start(BOX_IP)
+        print(f"{net_name}: OK - {result['url']}")
+        webcam.stop()
+        return True
+    except RuntimeError as e:
+        print(f"{net_name}: FAIL - {e}")
+        return False
+
+# Discover and test all cameras
+print("Discovering cameras...")
+devices = discover_cameras()
+print(f"Found {len(devices)} video devices")
+
+# Test configured nets (assumes you have webcam nets configured)
+test_camera('camera1')
+test_camera('camera2')
+```
+
+### Already Running Detection
+
+```python
+from lager import Net, NetType
+
+BOX_IP = '<BOX_IP>'
+
+webcam = Net.get('camera1', type=NetType.Webcam)
+
+# Start stream first time
+result1 = webcam.start(BOX_IP)
+print(f"First start: already_running = {result1['already_running']}")
+
+# Try to start again - should detect it's already running
+result2 = webcam.start(BOX_IP)
+print(f"Second start: already_running = {result2['already_running']}")
+
+# Check if active
+print(f"Is active: {webcam.is_active()}")
+
+# Cleanup
+webcam.stop()
+```
+
+## Web Interface
+
+Each stream provides a web interface at its URL with:
+
+- Live MJPEG video stream
+- Zoom controls (+, -, Reset)
+- FPS display
+- Sidebar with links to other active streams
+
+### API Endpoints
+
+| Endpoint | Method | Description |
+|----------|--------|-------------|
+| `/` | GET | HTML page with video viewer |
+| `/stream` | GET | Raw MJPEG video stream |
+| `/api/zoom` | GET | Get current zoom level |
+| `/api/zoom/in` | POST | Increase zoom |
+| `/api/zoom/out` | POST | Decrease zoom |
+| `/api/zoom/reset` | POST | Reset zoom to 1.0x |
+| `/api/fps` | GET | Get current FPS |
+| `/api/streams` | GET | List all active streams |
+| `/test` | GET | Health check endpoint |
+
+## Hardware Requirements
+
+| Requirement | Description |
+|-------------|-------------|
+| USB Webcams | UVC-compatible cameras |
+| Video Devices | `/dev/video*` device files |
+| OpenCV | Required for video capture |
+
+## Notes
+
+- Webcam nets must be configured on the Lager Box with video device path
+- Streams run on ports starting from 8081
+- Each stream uses a separate port, automatically allocated
+- Streams persist until explicitly stopped or the process dies
+- Dead stream processes are automatically cleaned up
+- Only one stream can use a video device at a time
+- Default resolution is 640x480 at 30 FPS
+- JPEG quality is set to 80 for bandwidth/quality balance
+- Streams are accessible via HTTP from any network the Lager Box is on
+- Zoom is digital (crop and scale), not optical

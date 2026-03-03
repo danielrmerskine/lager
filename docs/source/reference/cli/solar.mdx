@@ -1,0 +1,183 @@
+---
+title: Solar Simulation
+description: Control solar panel simulator settings and output
+---
+
+Control solar panel simulator Nets through the Lager CLI. Solar simulation enables testing of solar-powered devices by simulating various irradiance conditions, temperatures, and panel characteristics.
+
+## Syntax
+
+```bash
+lager solar [OPTIONS] NET_NAME COMMAND [ARGS]...
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `set` | Initialize and start solar simulation mode |
+| `stop` | Stop solar simulation mode |
+| `irradiance` | Set or read irradiance (W/m²) |
+| `mpp-current` | Read maximum power point current (A) |
+| `mpp-voltage` | Read maximum power point voltage (V) |
+| `resistance` | Set or read dynamic panel resistance (Ω) |
+| `temperature` | Read cell temperature (°C) |
+| `voc` | Read open-circuit voltage (V) |
+
+## Command Reference
+
+### `set`
+
+Initialize and start the solar simulation mode.
+
+```bash
+lager solar NET_NAME set [--box BOX]
+```
+
+This command configures the power supply to operate in solar panel simulation mode, enabling I-V curve emulation.
+
+### `stop`
+
+Stop the solar simulation mode and return to normal operation.
+
+```bash
+lager solar NET_NAME stop [--box BOX]
+```
+
+### `irradiance`
+
+Set or read the irradiance level in watts per square meter (W/m²).
+
+```bash
+lager solar NET_NAME irradiance [VALUE] [--box BOX]
+```
+
+**Arguments:**
+- `VALUE` - Irradiance value in W/m² (0.0 - 1500.0). If omitted, reads current value.
+
+**Examples:**
+```bash
+# Set irradiance to 1000 W/m² (standard test condition)
+lager solar SOLAR1 irradiance 1000
+
+# Read current irradiance
+lager solar SOLAR1 irradiance
+```
+
+### `mpp-current`
+
+Read the maximum power point (MPP) current in amps.
+
+```bash
+lager solar NET_NAME mpp-current [--box BOX]
+```
+
+Returns the current at which the simulated solar panel produces maximum power.
+
+### `mpp-voltage`
+
+Read the maximum power point (MPP) voltage in volts.
+
+```bash
+lager solar NET_NAME mpp-voltage [--box BOX]
+```
+
+Returns the voltage at which the simulated solar panel produces maximum power.
+
+### `resistance`
+
+Set or read the dynamic panel resistance in ohms.
+
+```bash
+lager solar NET_NAME resistance [VALUE] [--box BOX]
+```
+
+**Arguments:**
+- `VALUE` - Resistance value in Ω (0.1 - 100.0). If omitted, reads current value.
+
+### `temperature`
+
+Read the simulated cell temperature in degrees Celsius.
+
+```bash
+lager solar NET_NAME temperature [--box BOX]
+```
+
+### `voc`
+
+Read the open-circuit voltage (Voc) in volts.
+
+```bash
+lager solar NET_NAME voc [--box BOX]
+```
+
+Returns the voltage when no load is connected to the simulated solar panel.
+
+---
+
+## Examples
+
+```bash
+# Start solar simulation mode
+lager solar SOLAR_PANEL set --box my-lager-box
+
+# Set irradiance to standard test condition (1000 W/m²)
+lager solar SOLAR_PANEL irradiance 1000
+
+# Read MPP voltage and current
+lager solar SOLAR_PANEL mpp-voltage
+lager solar SOLAR_PANEL mpp-current
+
+# Read open-circuit voltage
+lager solar SOLAR_PANEL voc
+
+# Set panel resistance
+lager solar SOLAR_PANEL resistance 5.0
+
+# Stop solar simulation
+lager solar SOLAR_PANEL stop
+```
+
+---
+
+## Supported Hardware
+
+| Manufacturer | Model Series | Features |
+|--------------|--------------|----------|
+| EA | PSI/EL series | Two-quadrant operation, I-V curve simulation |
+| EA | PSB 10060-60 | Bidirectional power supply |
+| EA | PSB 10080-60 | Bidirectional power supply |
+
+---
+
+## Solar Panel Simulation Concepts
+
+### I-V Curve
+
+Solar panel simulators create an I-V (current-voltage) characteristic curve that mimics real solar panel behavior:
+- **Short-circuit current (Isc)**: Maximum current when terminals are shorted
+- **Open-circuit voltage (Voc)**: Voltage with no load
+- **Maximum Power Point (MPP)**: Optimal operating point for maximum power
+
+### Standard Test Conditions (STC)
+
+Industry standard for solar panel testing:
+- Irradiance: 1000 W/m²
+- Cell temperature: 25°C
+- Air mass: AM1.5
+
+---
+
+## Notes
+
+- Solar simulation requires compatible bidirectional power supplies
+- The EA PSI/EL series supports two-quadrant operation for realistic simulation
+- Use `lager nets` to see available solar nets on your box
+- Irradiance values above 1500 W/m² are outside the valid range

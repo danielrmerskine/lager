@@ -1,0 +1,176 @@
+---
+title: ADC
+description: Read analog-to-digital converter values
+---
+
+Read analog-to-digital converter (ADC) values from your box. Supports LabJack T7 and MCC USB-202 hardware with per-hardware channel naming and voltage ranges.
+
+## Syntax
+
+```bash
+lager adc [NET] [OPTIONS]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NET` | Name of the ADC net to read (optional if default is set) |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Usage
+
+### Read ADC Value
+
+Read voltage from an ADC net:
+
+```bash
+lager adc SENSOR_1 --box my-box
+```
+
+**Output:**
+
+```
+ADC 'SENSOR_1': 2.450000 V
+```
+
+The result is returned in volts with 6 decimal places.
+
+### List ADC Nets
+
+When invoked without a net name (and no default is set), lists all available ADC nets:
+
+```bash
+lager adc --box my-box
+```
+
+**Output:**
+
+```
+Name            Net Type  Instrument       Channel  Address
+================================================================
+VOLTAGE_SENSOR  adc       LabJack_T7       AIN0     USB::470026574
+TEMP_SENSOR     adc       LabJack_T7       AIN1     USB::470026574
+CURRENT_MON     adc       MCC_USB202       CH0      USB0::0x09DB::0x012B::...
+```
+
+## Supported Hardware
+
+| Manufacturer | Model | Channels | Voltage Range | Input Mode |
+|--------------|-------|----------|---------------|------------|
+| LabJack | T7 | 14 (AIN0-AIN13) | +/-10 V | Single-ended |
+| Measurement Computing | USB-202 | 8 (CH0-CH7) | +/-10 V | Single-ended |
+
+### Hardware Comparison
+
+| Feature | LabJack T7 | MCC USB-202 |
+|---------|-----------|-------------|
+| Channel count | 14 | 8 |
+| Channel names | AIN0-AIN13 | CH0-CH7 |
+| Pin input format | `0`-`13` or `AIN0`-`AIN13` | `0`-`7` or `CH0`-`CH7` |
+| Voltage range | +/-10 V (bipolar) | +/-10 V (bipolar) |
+| Resolution | 16-bit (~0.3 mV/LSB) | 12-bit (~4.9 mV/LSB) |
+| Connection | Shared handle (with DAC, GPIO, SPI) | Per-transaction open/close |
+| Device selection | Auto-discovered (no address needed) | Via serial number or VISA address |
+
+### Channel Naming
+
+When creating ADC nets, the channel name depends on the hardware:
+
+**LabJack T7:**
+```bash
+# Both forms accepted:
+lager nets create SENSOR_1 adc AIN0 USB::470026574
+lager nets create SENSOR_1 adc 0 USB::470026574    # Numeric shorthand
+```
+
+Numeric pins `0`-`13` map to `AIN0`-`AIN13` internally.
+
+**MCC USB-202:**
+```bash
+# Both forms accepted (case-insensitive):
+lager nets create SENSOR_1 adc CH0 USB0::0x09DB::...
+lager nets create SENSOR_1 adc 0 USB0::0x09DB::...  # Numeric shorthand
+```
+
+Numeric pins `0`-`7` and named pins `CH0`-`CH7` are both accepted. Channel names are case-insensitive.
+
+### Instrument Name Matching
+
+The backend driver is selected based on the instrument name in the net configuration:
+
+| Pattern | Driver |
+|---------|--------|
+| `labjack` + `t7` (case-insensitive, flexible separators) | LabJack T7 |
+| `mcc` + `usb` + `202` (case-insensitive, flexible separators) | MCC USB-202 |
+
+## Default Net
+
+Set a default ADC net to avoid specifying the name each time:
+
+```bash
+lager defaults add --adc-net SENSOR_1
+```
+
+Then:
+
+```bash
+lager adc
+```
+
+## Examples
+
+```bash
+# Read ADC value from voltage sensor
+lager adc VOLTAGE_SENSOR --box my-box
+
+# Read ADC value from temperature sensor
+lager adc TEMP_SENSOR --box my-box
+
+# Read ADC value from current monitor
+lager adc CURRENT_MONITOR --box my-box
+
+# List all ADC nets on the box
+lager adc --box my-box
+
+# Use default net (if configured)
+lager adc
+```
+
+## Scripting Example
+
+```bash
+#!/bin/bash
+# Read sensor and check threshold
+RESULT=$(lager adc VOLTAGE_SENSOR --box my-box)
+echo "$RESULT"
+
+# Extract numeric value
+VOLTAGE=$(echo "$RESULT" | grep -oP '[\d.]+(?= V)')
+if (( $(echo "$VOLTAGE > 3.0" | bc -l) )); then
+    echo "Voltage too high: $VOLTAGE V"
+    exit 1
+fi
+echo "Voltage OK: $VOLTAGE V"
+```
+
+## Notes
+
+- Results are returned in volts with 6 decimal places
+- Both hardware backends support bipolar measurement (+/-10 V range)
+- ADC nets must be configured before use with `lager nets create <name> adc <channel> <address>`
+- Default net can be set with `lager defaults add --adc-net`
+- LabJack T7 shares a connection handle with DAC, GPIO, and SPI operations on the same device
+- USB-202 opens and closes the connection on each read
+- Use `lager instruments --box <box>` to verify the ADC device is detected
+
+## See Also
+
+- [DAC](/source/reference/cli/dac) -- Digital-to-analog converter output (the complement of ADC)
+- [Python ADC API](/source/reference/python/adc) -- Read ADC values in Python scripts

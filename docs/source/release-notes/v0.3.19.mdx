@@ -1,0 +1,60 @@
+---
+title: "Version 0.3.19"
+description: "February 9, 2026"
+---
+
+## <u>Features</u>
+
+### I2C Protocol Support
+- New `lager i2c` commands for I2C bus communication, including `config`, `scan`, and `transfer` subcommands
+- Supports Aardvark USB-I2C and LabJack T7 hardware adapters
+- `lager i2c scan` detects all devices on the I2C bus and reports their addresses
+- `lager i2c transfer` performs read, write, and write-then-read transactions
+- `lager i2c config` sets bus frequency and pull-up resistor options
+
+### FT232H Adapter Support
+- Added the FTDI FT232H USB adapter as a backend for SPI and GPIO protocols
+- Provides an affordable, widely-available option for SPI communication with target devices
+
+### Joulescope JS220 Support
+- Added support for the Joulescope JS220 precision power analyzer
+- The JS220 is now automatically detected during instrument discovery
+- Use existing `lager watt` commands to read power measurements from the Joulescope
+
+### Net TUI Enhancements
+- The `lager nets` interactive TUI now includes Rename and Delete buttons for managing nets directly
+- Arrow key navigation works for all TUI buttons and selections
+- Updated color scheme with Lager branding
+- The `lager nets` list output format now matches the TUI layout for consistency
+
+## <u>Bug Fixes</u>
+
+- Fixed SPI transactions to use separate TX and RX data arrays, resolving data corruption on simultaneous read/write operations
+- Fixed SPI Slave Select polarity handling to work across different versions of the aardvark_py library
+- Fixed Aardvark adapter initialization to use the correct SPI+GPIO mode instead of I2C mode
+- Fixed `aa_spi_configure` to pass clock polarity and phase as separate arguments
+- Fixed Aardvark adapter to open by port number instead of serial number matching, improving reliability when multiple adapters are connected
+
+## <u>Improvements</u>
+
+- SPI and GPIO nets can no longer be created on the same pins, preventing configuration conflicts
+- Improved help messages for SPI commands
+- Added validation for debug net types, preventing invalid net type configurations
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.19
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.19/)

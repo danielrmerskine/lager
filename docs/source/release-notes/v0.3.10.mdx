@@ -1,0 +1,48 @@
+---
+title: "Version 0.3.10"
+description: "January 15, 2026"
+---
+
+## <u>Features</u>
+
+### Lager Terminal Integrated into CLI
+- The Lager Terminal is now built directly into lager-cli
+- No separate installation required - just run `lager` with no arguments
+- Three ways to launch:
+  - `lager` - Launches terminal when no subcommand given
+  - `lager terminal` - Explicit terminal command
+  - `lager-terminal` - Direct entry point
+- Tab completion for all commands and subcommands
+- Command history navigation with up/down arrows
+- Auto-suggest from history
+- Colored output with success/error indicators
+
+### Interactive Command Protection
+- TUI commands (supply tui, battery tui, nets tui) are now blocked inside Lager Terminal
+- Clear warning message directs users to run TUI commands directly from their shell
+- Prevents hanging/stuck terminal sessions
+
+## <u>Improvements</u>
+
+### Package Consolidation
+- Removed separate `lager_terminal` package
+- All terminal code now lives in `cli/terminal/`
+- Cleaner installation with single `pip install lager-cli`
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.10
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.10/)

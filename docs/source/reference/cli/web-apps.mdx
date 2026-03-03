@@ -1,0 +1,104 @@
+---
+title: Web Apps
+description: Open web applications from the CLI
+---
+
+Open web applications through the Lager CLI for oscilloscope, logic analyzer, webcam, and factory dashboard access.
+
+## Syntax
+
+```bash
+lager scope [OPTIONS]
+lager logic [OPTIONS]
+lager webcam [OPTIONS]
+lager factory [OPTIONS]
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `scope` | Open oscilloscope web app |
+| `logic` | Open logic analyzer web app |
+| `webcam` | Open webcam web app |
+| `factory` | Start the Factory dashboard (see [Factory](/source/reference/cli/factory)) |
+
+## Command Reference
+
+### `scope`
+
+Open oscilloscope web application.
+
+```bash
+lager scope [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `logic`
+
+Open logic analyzer web application.
+
+```bash
+lager logic [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `webcam`
+
+Open webcam web application.
+
+```bash
+lager webcam [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `factory`
+
+Start the Factory dashboard web application for production testing.
+
+```bash
+lager factory [OPTIONS]
+```
+
+**Options:**
+- `--port INT` - Port number (default: 5001)
+- `--host TEXT` - Host to bind to (default: 0.0.0.0)
+
+See the [Factory reference page](/source/reference/cli/factory) for full documentation.
+
+## Examples
+
+```bash
+# Open oscilloscope
+lager scope --box my-lager-box
+
+# Open logic analyzer
+lager logic --box my-lager-box
+
+# Open webcam
+lager webcam --box my-lager-box
+
+# Start factory dashboard
+lager factory --port 5001
+```
+
+## Notes
+
+- Each command opens a web browser with the respective application
+- Requires a web browser to be available on your system
+- Applications provide real-time access to device data and controls
+- Ensure the target box has the required hardware capabilities
+- Web apps require a configured box (use `lager boxes add` first) 

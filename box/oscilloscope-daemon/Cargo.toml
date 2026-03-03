@@ -1,0 +1,17 @@
+[workspace]
+resolver = "2"
+members = [
+    "cli",
+    "daemon",
+    "protocol",
+    "wtransport_test",
+]
+
+[workspace.package]
+version = "0.1.0"
+edition = "2021"
+authors = ["Lager Data"]
+description = "Oscilloscope data streaming system for Lager"
+license = "Apache-2.0"
+repository = "https://github.com/lagerdata/lager"
+

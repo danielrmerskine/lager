@@ -1,0 +1,351 @@
+---
+title: UART Net
+description: High-level UART serial communication through Lager nets
+---
+
+Access UART serial ports through the Lager net abstraction for simplified device path resolution and connection management.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `get_path()` | Get the device path (e.g., `/dev/ttyUSB0`) |
+| `connect()` | Connect and return a pyserial Serial object |
+| `get_baudrate()` | Get the configured baudrate |
+| `get_config()` | Get the raw net configuration |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.UART)`
+
+Get a UART net by name.
+
+```python
+from lager import Net, NetType
+
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the UART net |
+| `type` | `NetType` | Must be `NetType.UART` |
+
+**Returns:** `UARTNet` instance
+
+### `get_path()`
+
+Get the device path for the UART net.
+
+```python
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+device_path = uart.get_path()
+print(f"Device: {device_path}")  # e.g., "/dev/ttyUSB0"
+```
+
+**Returns:** `str` - Device path like `/dev/ttyUSB0`
+
+**Raises:** `FileNotFoundError` if the UART device is not connected
+
+### `connect(**overrides)`
+
+Connect to the UART serial port with pyserial.
+
+```python
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+
+# Connect with default settings
+ser = uart.connect()
+
+# Connect with custom baudrate
+ser = uart.connect(baudrate=9600, timeout=1.0)
+
+# Use the pyserial connection
+ser.write(b'AT\r\n')
+response = ser.readline()
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `baudrate` | `int` | Baud rate (default from config or 115200) |
+| `timeout` | `float` | Read timeout in seconds |
+| `bytesize` | `int` | Data bits (5, 6, 7, or 8) |
+| `parity` | `str` | Parity (`'N'`, `'E'`, `'O'`) |
+| `stopbits` | `float` | Stop bits (1, 1.5, or 2) |
+
+**Returns:** `serial.Serial` - Connected pyserial object
+
+### `get_baudrate()`
+
+Get the configured baudrate for this net.
+
+```python
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+baudrate = uart.get_baudrate()
+print(f"Baudrate: {baudrate}")
+```
+
+**Returns:** `int` - Configured baudrate (default: 115200)
+
+### `get_config()`
+
+Get the raw net configuration dictionary.
+
+```python
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+config = uart.get_config()
+print(config)
+```
+
+**Returns:** `dict` - Configuration dictionary
+
+## Properties
+
+| Property | Type | Description |
+|----------|------|-------------|
+| `name` | `str` | Net name |
+| `usb_serial` | `str` | USB serial number for device identification |
+| `channel` | `str` | Channel/port number |
+| `params` | `dict` | Serial parameters (baudrate, etc.) |
+
+## Examples
+
+### Basic UART Communication
+
+```python
+from lager import Net, NetType
+
+# Get the UART net
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+
+# Connect with default settings
+ser = uart.connect()
+
+# Send command
+ser.write(b'AT\r\n')
+
+# Read response
+response = ser.readline()
+print(f"Response: {response.decode('utf-8').strip()}")
+
+# Clean up
+ser.close()
+```
+
+### Using Device Path Directly
+
+```python
+from lager import Net, NetType
+import serial
+
+# Get the UART net
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+
+# Get device path for manual pyserial usage
+device_path = uart.get_path()
+print(f"Using device: {device_path}")
+
+# Create your own serial connection
+ser = serial.Serial(
+    port=device_path,
+    baudrate=115200,
+    timeout=5,
+    bytesize=serial.EIGHTBITS,
+    parity=serial.PARITY_NONE,
+    stopbits=serial.STOPBITS_ONE
+)
+
+# Use the connection
+ser.write(b'Hello\r\n')
+ser.close()
+```
+
+### Interactive Console
+
+```python
+from lager import Net, NetType
+
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+ser = uart.connect(baudrate=115200, timeout=0.1)
+
+print("Interactive console (Ctrl+C to exit)")
+print("-" * 40)
+
+try:
+    while True:
+        # Read any available data
+        if ser.in_waiting:
+            data = ser.read(ser.in_waiting)
+            print(data.decode('utf-8', errors='ignore'), end='')
+
+        # Get user input (non-blocking would need additional handling)
+        # This is a simple example
+except KeyboardInterrupt:
+    print("\nExiting...")
+finally:
+    ser.close()
+```
+
+### Command/Response Pattern
+
+```python
+from lager import Net, NetType
+import time
+
+def send_command(ser, command, timeout=2.0):
+    """Send command and wait for response."""
+    ser.reset_input_buffer()
+    ser.write(f"{command}\r\n".encode('utf-8'))
+
+    response = ""
+    start = time.time()
+
+    while time.time() - start < timeout:
+        if ser.in_waiting:
+            data = ser.read(ser.in_waiting)
+            response += data.decode('utf-8', errors='ignore')
+
+            # Check for response terminator
+            if '\n' in response:
+                break
+
+        time.sleep(0.01)
+
+    return response.strip()
+
+# Usage
+uart = Net.get('DUT_SERIAL', type=NetType.UART)
+ser = uart.connect(timeout=1.0)
+
+# Query firmware version
+version = send_command(ser, "AT+VER")
+print(f"Firmware: {version}")
+
+# Query status
+status = send_command(ser, "AT+STATUS")
+print(f"Status: {status}")
+
+ser.close()
+```
+
+### Production Test with UART
+
+```python
+from lager import Net, NetType
+import time
+
+def uart_loopback_test(net_name):
+    """Test UART by sending data and verifying echo."""
+    uart = Net.get(net_name, type=NetType.UART)
+    ser = uart.connect(baudrate=115200, timeout=1.0)
+
+    test_data = b"LOOPBACK_TEST_12345"
+
+    try:
+        # Clear buffers
+        ser.reset_input_buffer()
+        ser.reset_output_buffer()
+
+        # Send test data
+        ser.write(test_data)
+        time.sleep(0.1)
+
+        # Read response
+        response = ser.read(len(test_data))
+
+        # Verify
+        if response == test_data:
+            print(f"PASS: Loopback test successful")
+            return True
+        else:
+            print(f"FAIL: Expected {test_data}, got {response}")
+            return False
+
+    finally:
+        ser.close()
+
+# Run test
+uart_loopback_test('DUT_SERIAL')
+```
+
+### Multi-Net UART Test
+
+```python
+from lager import Net, NetType
+
+# Test multiple UART nets
+UART_NETS = ['UART1', 'UART2', 'DEBUG_SERIAL']
+
+results = {}
+for net_name in UART_NETS:
+    try:
+        uart = Net.get(net_name, type=NetType.UART)
+        path = uart.get_path()
+        baudrate = uart.get_baudrate()
+
+        ser = uart.connect()
+        ser.write(b'AT\r\n')
+        response = ser.readline()
+        ser.close()
+
+        results[net_name] = {
+            'path': path,
+            'baudrate': baudrate,
+            'status': 'OK' if response else 'NO_RESPONSE'
+        }
+    except Exception as e:
+        results[net_name] = {'status': 'ERROR', 'error': str(e)}
+
+# Print results
+for name, result in results.items():
+    print(f"{name}: {result}")
+```
+
+## UART vs Serial Module
+
+The Lager Python SDK provides two ways to work with serial communication:
+
+| Feature | UART Net (`NetType.UART`) | Serial (`pyserial`) |
+|---------|---------------------------|---------------------|
+| **Device Discovery** | Automatic via USB serial number | Manual device path |
+| **Configuration** | Stored in Lager config | Manual in code |
+| **Integration** | Full Lager net system | Standalone |
+| **Best For** | Production tests, multi-device | Quick prototyping |
+
+Use **UART Net** when:
+- Device paths may change between reboots
+- You need to identify devices by USB serial number
+- You're using Lager's net configuration system
+- Running automated production tests
+
+Use **raw pyserial** when:
+- You know the exact device path
+- You need maximum flexibility
+- You're doing quick debugging
+
+## Hardware Integration
+
+| Hardware | Description |
+|----------|-------------|
+| USB-Serial Adapters | FTDI, CP2102, CH340, etc. |
+| UART Bridges | Multi-port USB-UART converters |
+| Built-in UART | Native UART on Lager Box hardware |
+
+## Notes
+
+- UART nets resolve device paths using USB serial numbers for consistent identification
+- The `connect()` method returns a standard pyserial `Serial` object
+- Default baudrate is 115200 if not specified in configuration
+- Device paths are cached after first resolution
+- Use `get_path()` if you need the raw device path for other tools
+- Serial parameters from net configuration can be overridden in `connect()`

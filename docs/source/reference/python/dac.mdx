@@ -1,0 +1,169 @@
+---
+title: DAC
+description: Control digital-to-analog converter outputs
+---
+
+Set analog voltage outputs using DAC pins. Supports LabJack T7 and MCC USB-202 hardware.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `output(voltage)` | Set analog output voltage |
+| `get_voltage()` | Read configured output voltage |
+| `input()` | Alias for `get_voltage()` |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.DAC)`
+
+Get a DAC net by name.
+
+```python
+from lager import Net, NetType
+
+dac = Net.get('VREF', type=NetType.DAC)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the DAC net |
+| `type` | `NetType` | Must be `NetType.DAC` |
+
+**Returns:** DAC Net instance
+
+### `output(voltage)`
+
+Set the analog output voltage.
+
+```python
+dac.output(2.5)  # Set to 2.5V
+```
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `voltage` | `float` | Output voltage in volts |
+
+### `get_voltage()`
+
+Read the currently configured output voltage.
+
+```python
+v = dac.get_voltage()
+print(f"DAC set to: {v}V")
+```
+
+**Returns:** `float` - Configured voltage in volts
+
+### `input()`
+
+Alias for `get_voltage()`. Returns the currently configured output voltage.
+
+```python
+v = dac.input()
+print(f"DAC output: {v}V")
+```
+
+**Returns:** `float` - Configured voltage in volts
+
+## Examples
+
+### Set Reference Voltage
+
+```python
+from lager import Net, NetType
+
+vref = Net.get('VREF', type=NetType.DAC)
+vref.output(1.8)  # Set to 1.8V
+```
+
+### Generate Ramp Signal
+
+```python
+from lager import Net, NetType
+import time
+
+signal = Net.get('SIGNAL_OUT', type=NetType.DAC)
+
+# Ramp from 0 to 5V in 0.5V steps
+for v in range(0, 51, 5):
+    voltage = v / 10.0
+    signal.output(voltage)
+    print(f"Output: {voltage}V")
+    time.sleep(0.1)
+```
+
+### Voltage Sweep Test
+
+```python
+from lager import Net, NetType
+import time
+
+control = Net.get('CONTROL', type=NetType.DAC)
+sensor = Net.get('RESPONSE', type=NetType.ADC)
+
+# Sweep control voltage and measure response
+for mv in range(0, 3301, 100):
+    voltage = mv / 1000.0
+    control.output(voltage)
+    time.sleep(0.1)  # Settling time
+
+    response = sensor.input()
+    print(f"Control: {voltage:.2f}V, Response: {response:.3f}V")
+```
+
+### Set and Verify
+
+```python
+from lager import Net, NetType
+
+dac = Net.get('ANALOG_OUT', type=NetType.DAC)
+
+# Set output
+dac.output(3.3)
+
+# Read back to verify
+readback = dac.get_voltage()
+print(f"Set: 3.3V, Readback: {readback}V")
+```
+
+## Supported Hardware
+
+| Hardware | Channels | Range |
+|----------|----------|-------|
+| LabJack T7 | DAC0-DAC1 | 0-10 V |
+| MCC USB-202 | AOUT0-AOUT1 | 0-5 V |
+
+### Pin Naming
+
+**LabJack T7:**
+
+| Pin Input | Channel |
+|-----------|---------|
+| `0`-`1` | DAC0-DAC1 |
+| `"DAC0"`-`"DAC1"` | DAC0-DAC1 |
+
+**MCC USB-202:**
+
+| Pin Input | Channel |
+|-----------|---------|
+| `0`-`1` | AOUT0-AOUT1 |
+| `"DAC0"`-`"DAC1"` | AOUT0-AOUT1 |
+| `"AOUT0"`-`"AOUT1"` | AOUT0-AOUT1 |
+
+## Notes
+
+- DAC nets work directly without `enable()`/`disable()` calls
+- LabJack T7 output range: 0-10 V
+- USB-202 output range: 0-5 V
+- `input()` is an alias for `get_voltage()` and returns the configured output value
+- Output values are maintained until changed or power cycle
+- Net names must match those configured on the Lager Box

@@ -1,0 +1,147 @@
+---
+title: ADC
+description: Read analog-to-digital converter values
+---
+
+Read analog voltage values from ADC pins. Supports LabJack T7 and MCC USB-202 hardware.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+| Method | Description |
+|--------|-------------|
+| `input()` | Read analog voltage |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.ADC)`
+
+Get an ADC net by name.
+
+```python
+from lager import Net, NetType
+
+adc = Net.get('SENSOR', type=NetType.ADC)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the ADC net |
+| `type` | `NetType` | Must be `NetType.ADC` |
+
+**Returns:** ADC Net instance
+
+### `input()`
+
+Read the analog voltage.
+
+```python
+voltage = adc.input()
+print(f"Voltage: {voltage}V")
+```
+
+**Returns:** `float` - Voltage in volts
+
+## Examples
+
+### Single Reading
+
+```python
+from lager import Net, NetType
+
+sensor = Net.get('TEMP_SENSOR', type=NetType.ADC)
+voltage = sensor.input()
+print(f"Sensor voltage: {voltage:.3f}V")
+```
+
+### Continuous Monitoring
+
+```python
+from lager import Net, NetType
+import time
+
+battery = Net.get('BATTERY_SENSE', type=NetType.ADC)
+
+for i in range(10):
+    voltage = battery.input()
+    print(f"Battery: {voltage:.2f}V")
+    time.sleep(1)
+```
+
+### Data Logging
+
+```python
+from lager import Net, NetType
+import time
+import csv
+
+sensor = Net.get('CURRENT_SENSE', type=NetType.ADC)
+
+with open('readings.csv', 'w', newline='') as f:
+    writer = csv.writer(f)
+    writer.writerow(['time', 'voltage'])
+
+    start = time.time()
+    for i in range(100):
+        elapsed = time.time() - start
+        voltage = sensor.input()
+        writer.writerow([elapsed, voltage])
+        time.sleep(0.1)
+```
+
+### Multiple Sensors
+
+```python
+from lager import Net, NetType
+
+sensors = {
+    'TEMP': Net.get('TEMP_SENSOR', type=NetType.ADC),
+    'CURRENT': Net.get('CURRENT_SENSE', type=NetType.ADC),
+    'BATTERY': Net.get('BATTERY_SENSE', type=NetType.ADC),
+}
+
+for name, sensor in sensors.items():
+    voltage = sensor.input()
+    print(f"{name}: {voltage:.3f}V")
+```
+
+## Supported Hardware
+
+| Hardware | Channels | Range | Resolution |
+|----------|----------|-------|------------|
+| LabJack T7 | 14 (AIN0-AIN13) | +/-10 V | 16-bit (~0.3 mV/LSB) |
+| MCC USB-202 | 8 (CH0-CH7) | +/-10 V | 12-bit (~4.9 mV/LSB) |
+
+Both devices support bipolar measurement (positive and negative voltages).
+
+### Pin Naming
+
+**LabJack T7:**
+
+| Pin Input | Channel |
+|-----------|---------|
+| `0`-`13` | AIN0-AIN13 |
+| `"AIN0"`-`"AIN13"` | AIN0-AIN13 |
+
+**MCC USB-202:**
+
+| Pin Input | Channel |
+|-----------|---------|
+| `0`-`7` | CH0-CH7 |
+| `"CH0"`-`"CH7"` | CH0-CH7 (case-insensitive) |
+
+## Notes
+
+- ADC nets work directly without `enable()`/`disable()` calls
+- Returns voltage as a float in volts
+- Both devices have a +/-10 V input range (bipolar)
+- LabJack T7 shares a connection handle with DAC, GPIO, and SPI operations
+- USB-202 opens and closes the connection on each read
+- Net names must match those configured on the Lager Box

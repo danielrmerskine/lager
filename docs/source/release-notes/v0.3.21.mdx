@@ -1,0 +1,31 @@
+---
+title: "Version 0.3.21"
+description: "February 15, 2026"
+---
+
+## <u>Bug Fixes</u>
+
+- Fixed `lager update` version file write timing: version is now written to `/etc/lager/version` before container restart instead of after, preventing version info loss if the restart disrupts SSH
+- Added retry logic (3 attempts) for version file write during `lager update` to improve reliability
+
+## <u>Improvements</u>
+
+- Updated SPI Aardvark test scripts with incremental config tests and improved manual test coverage
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.21
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.21/)

@@ -1,0 +1,70 @@
+---
+title: "Version 0.3.6"
+description: "January 15, 2025"
+---
+
+## <u>Features</u>
+
+### Enhanced `lager boxes sync` Command
+- Added version comparison against local CLI version
+- Boxes with mismatched versions now display in yellow with "(needs update)" indicator
+- Shows local CLI version at the top of sync output
+- Comprehensive error messages for connection failures:
+  - Connection refused (service not running)
+  - Network unreachable (VPN/network issues)
+  - Connection timeout (firewall/network issues)
+  - Detailed HTTP error responses
+
+### Improved Version Display
+- `lager hello` now displays the Lager Box version
+- Better version tracking and display across commands
+
+## <u>Bug Fixes</u>
+
+### Fixed `lager update` Sudoers Issues
+- Automatically detects and fixes incorrect sudoers file ownership
+- Resolves timeout issues when `/etc/sudoers.d/lagerdata-udev` is owned by wrong user
+- Updated version file write logic to work with both old and new sudoers configurations
+- Uses directory permissions instead of file-specific sudo commands
+
+### Fixed Version File Updates
+- Correctly deletes old version file before writing new one
+- Prevents stale version information from persisting after updates
+
+### Fixed Version Detection
+- Uses `git checkout` instead of `git restore` for better compatibility with sparse checkouts
+- Ensures accurate version reading during Lager Box updates
+
+## <u>Improvements</u>
+
+### Enhanced `lager update` Reliability
+- Increased container startup timeout from 3 minutes to 5 minutes for slower Lager Boxes
+- Added helpful troubleshooting tips when container startup times out
+- Better error handling with specific suggestions for debugging
+
+### Simplified `lager boxes sync` Output
+- Removed unnecessary "Updated" and "Unchanged" counters
+- Streamlined summary to show only "Needs update" and "Failed" counts
+- Removed redundant command suggestions from output
+
+### Hardware Database Updates
+- Updated Keysight E36233A USB VID/PID verification
+- Improved device identification consistency
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.6
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.6/)

@@ -1,0 +1,54 @@
+---
+title: "Version 0.3.17"
+description: "January 29, 2026"
+---
+
+## <u>Features</u>
+
+### SPI Communication Support
+- Added new `lager spi` command for SPI (Serial Peripheral Interface) communication via LabJack T7
+- Subcommands: `read`, `write`, `transfer`, `config`
+- Supports all standard SPI parameters: mode (0-3), bit order (MSB/LSB), frequency, chip select polarity, word size (8/16/32-bit)
+- Multiple output formats: hex, bytes, JSON
+- Data input via hex string (`--data`) or binary file (`--data-file`)
+- Automatic padding and truncation for transfer operations
+
+### SPI Python API
+- New `SPINet` class accessible via `Net.get('my_spi', NetType.SPI)`
+- Methods: `config()`, `read()`, `read_write()`, `transfer()`, `write()`
+- Full-duplex read/write support with configurable chip select behavior
+
+## <u>Bug Fixes</u>
+
+### LabJack Handle Sharing
+- Fixed an issue where GPIO operations would close the LabJack device and kill active SPI connections
+- ADC, DAC, and GPIO modules now use a global shared handle manager instead of opening and closing per operation
+- Added atexit cleanup handler to properly release hardware resources on process exit
+
+## <u>Improvements</u>
+
+### LabJack SPI Hardware Limitation Workaround
+- Automatically forces 800kHz clock speed for SPI transactions of 3 or more bytes when a lower frequency is requested, due to a LabJack T7 hardware limitation
+- Prints a warning when this override occurs so users are aware of the adjusted frequency
+- LabJack T7 firmware 1.0332 or later is required for SPI support
+
+### Deployment
+- Improved Lager Box deployment scripts
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.17
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.17/)

@@ -1,0 +1,128 @@
+---
+title: Exec
+description: Execute commands in a local Docker development container
+---
+
+Run shell commands inside a Docker development container on your local machine. Commands can be run inline or saved as named aliases for reuse.
+
+## Syntax
+
+```bash
+lager exec [OPTIONS] [COMMAND] [EXTRA_ARGS]...
+```
+
+## Options
+
+| Option | Short | Type | Default | Description |
+|--------|-------|------|---------|-------------|
+| `--command TEXT` | | string | | Raw shell command to execute (e.g., `'make build'`) |
+| `--save-as TEXT` | | string | | Save the command under this alias for later use |
+| `--warn / --no-warn` | | flag | `--warn` | Warn when overwriting a saved command |
+| `--env FOO=BAR` | | multiple | | Set environment variable in the container |
+| `--passenv NAME` | | multiple | | Inherit environment variable from current shell |
+| `--mount NAME` | `-m` | string | | Docker volume to mount |
+| `--interactive / --no-interactive` | `-i` | flag | `--interactive` | Keep STDIN open |
+| `--tty / --no-tty` | `-t` | flag | `--tty` | Allocate a pseudo-TTY |
+| `--user TEXT` | `-u` | string | current UID | User to run as in the container |
+| `--group TEXT` | `-g` | string | current GID | Group to run as in the container |
+| `--verbose` | `-v` | flag | | Show the full Docker command being executed |
+| `--help` | | | | Show help message and exit |
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `COMMAND` | Name of a previously saved command to run |
+| `EXTRA_ARGS` | Additional arguments appended to the command at runtime |
+
+## Prerequisites
+
+A development environment must be created first:
+
+```bash
+lager devenv create
+```
+
+This configures the Docker image, mount directory, and shell used by `lager exec`.
+
+## Command Reference
+
+### Run an Inline Command
+
+```bash
+lager exec --command 'make build'
+lager exec --command 'pytest tests/ -v'
+```
+
+### Save a Command for Reuse
+
+```bash
+lager exec --command 'make clean && make build' --save-as build
+```
+
+### Run a Saved Command
+
+```bash
+lager exec build
+```
+
+### Append Extra Arguments
+
+```bash
+# Runs: make clean && make build --verbose --debug
+lager exec build --verbose --debug
+```
+
+### Pass Environment Variables
+
+```bash
+# Set explicitly
+lager exec --command 'make build' --env CFLAGS="-O2" --env DEBUG=0
+
+# Inherit from current shell
+lager exec --command 'make build' --passenv PATH --passenv HOME
+```
+
+## How It Differs from Other Commands
+
+| Command | Target | Purpose |
+|---------|--------|---------|
+| `lager exec` | Local Docker container | Run build/test commands in a reproducible environment |
+| `lager python` | Remote Lager Box | Execute Python scripts that interact with test equipment |
+| `lager ssh` | Remote Lager Box | Open an interactive SSH shell for box administration |
+
+## Saved Command Management
+
+Saved commands are stored in the devenv section of your `.lager` config. Use `lager devenv` to manage them:
+
+```bash
+lager devenv commands         # List saved commands
+lager devenv add <name> "<cmd>"   # Add a command
+lager devenv delete <name>    # Remove a command
+lager devenv terminal         # Open an interactive shell in the container
+```
+
+## Examples
+
+```bash
+# One-off build
+lager exec --command 'make -j4'
+
+# Save and reuse a test command
+lager exec --command 'pytest tests/ --tb=short' --save-as test
+lager exec test
+
+# Run with verbose Docker output
+lager exec --verbose --command 'gcc main.c -o main'
+
+# Non-interactive mode for CI
+lager exec --no-interactive --no-tty --command 'make check'
+```
+
+## Notes
+
+- The container is created with `--rm` so it is removed after each command
+- Exit codes from the container are propagated to the CLI
+- Source code is mounted from your local filesystem into the container
+- Lager configuration (`~/.lager`) is mounted into the container when present
+- The `COMMAND` argument and `--command` option are mutually exclusive; use one or the other

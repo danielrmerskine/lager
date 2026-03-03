@@ -1,0 +1,84 @@
+---
+title: Install
+description: Install Lager box code onto a box
+---
+
+Deploy the Lager box software, Docker container, and supporting tools onto a new or existing box.
+
+## Syntax
+
+```bash
+lager install [OPTIONS]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--box TEXT` | string | | Box name (uses stored IP and username from `.lager` config) |
+| `--ip TEXT` | string | | Target box IP address |
+| `--user TEXT` | string | `lagerdata` | SSH username |
+| `--branch TEXT` | string | `main` | Git branch to deploy |
+| `--skip-jlink` | flag | | Skip J-Link installation (pyOCD is always installed) |
+| `--skip-firewall` | flag | | Skip UFW firewall configuration |
+| `--skip-verify` | flag | | Skip post-deployment verification |
+| `--corporate-vpn TEXT` | string | | Corporate VPN interface name for firewall rules (e.g., `tun0`) |
+| `--yes` | flag | | Skip confirmation prompts |
+| `--help` | | | Show help message and exit |
+
+Either `--box` or `--ip` is required. If both are provided, the command exits with an error.
+
+## What Gets Installed
+
+| Component | Description |
+|-----------|-------------|
+| Docker container | Lager service container (ports 5000 and 8765) with auto-restart |
+| pyOCD | Open-source debug probe tool (automatic) |
+| J-Link | SEGGER debug probe software (optional, skipped with `--skip-jlink`) |
+| UFW firewall | Restricts service ports to VPN and localhost (skipped with `--skip-firewall`) |
+| Box code | Python libraries and services in `~/box` |
+
+## Installation Flow
+
+1. **Resolve target** - Looks up box IP from `--box` name or uses `--ip` directly
+2. **Verify SSH** - Tests key-based authentication, falls back to password if needed
+3. **Show summary** - Displays what will be installed and asks for confirmation
+4. **Deploy** - Runs the deployment script (up to 30 minutes for a fresh install)
+5. **Store version** - Writes the CLI version to `/etc/lager/version` on the box
+6. **Add to config** - Optionally adds the box to your local `.lager` config
+
+## Examples
+
+```bash
+# Install to a new box by IP
+lager install --ip 192.168.1.100
+
+# Install to a stored box
+lager install --box my-test-box
+
+# Install a specific branch with a custom user
+lager install --ip 192.168.1.100 --user pi --branch staging
+
+# Install with corporate VPN firewall support
+lager install --ip 192.168.1.100 --corporate-vpn tun0
+
+# Skip optional components
+lager install --ip 192.168.1.100 --skip-jlink --skip-firewall
+
+# Non-interactive installation
+lager install --ip 192.168.1.100 --yes
+```
+
+## SSH Authentication
+
+The command attempts key-based SSH authentication first. If that fails, it offers to continue with password authentication. For new hosts, the SSH host key is accepted automatically.
+
+If the host key has changed since a previous connection, the command asks you to verify the change manually before proceeding.
+
+## Notes
+
+- Requires SSH client tools (`ssh`, `ssh-keygen`) to be installed locally
+- The deployment script is bundled with the `lager-cli` package
+- After installation, verify connectivity with `lager hello --box <name>`
+- Use `lager update` to deploy code updates to an already-installed box
+- Use `lager uninstall` to remove Lager software from a box

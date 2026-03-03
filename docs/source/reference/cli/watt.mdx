@@ -1,0 +1,151 @@
+---
+title: Watt Meter
+description: Read power consumption from watt meter
+---
+
+Read power consumption measurements from watt meter Nets through the Lager CLI. Supports Yocto-Watt and Joulescope JS220 hardware.
+
+## Syntax
+
+```bash
+lager watt [OPTIONS] NET_NAME
+```
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NET_NAME` | Name of the watt meter net to read (optional if default is set) |
+
+## Usage
+
+```bash
+lager watt NET_NAME [--box BOX]
+```
+
+If `NET_NAME` is omitted and no default is set, lists all available watt meter nets on the box.
+
+## Output
+
+Returns power in watts with 3 decimal places:
+
+```
+Power 'POWER_METER': 5.230 W
+```
+
+The reading timeout is 30 seconds. If no reading is received within that time, the command exits with an error suggesting the device may be disconnected or experiencing USB issues.
+
+## Supported Hardware
+
+| Manufacturer | Model | Identification | Features |
+|--------------|-------|---------------|----------|
+| Yoctopuce | Yocto-Watt | USB VID:PID `24e0:002a` | Real-time power measurement |
+| Joulescope | JS220 | USB VID:PID `16d0:10ba` | High-precision power, voltage, and current measurement |
+
+### Hardware Feature Comparison
+
+| Feature | Yocto-Watt | Joulescope JS220 |
+|---------|-----------|------------------|
+| Power reading (`read`) | Yes | Yes |
+| Voltage reading (`read_voltage`) | No | Yes (Python API) |
+| Current reading (`read_current`) | No | Yes (Python API) |
+| Combined reading (`read_all`) | No | Yes (Python API) |
+| Measurement method | Instantaneous | 0.1s averaged |
+| Device selection | Channel-based | Serial number-based |
+
+The CLI `lager watt` command returns power (watts) for both devices. The Joulescope JS220's additional measurement capabilities (individual voltage and current readings) are available through the [Python API](/reference/python/watt).
+
+### Instrument Name Matching
+
+The backend driver is selected based on the instrument name in the net configuration:
+
+| Pattern | Driver |
+|---------|--------|
+| Contains `joulescope` or `js220` (case-insensitive) | Joulescope JS220 |
+| All other watt meter instruments | Yocto-Watt |
+
+## Default Net
+
+To avoid specifying the net name each time:
+
+```bash
+lager defaults add --watt-net POWER_METER
+```
+
+Then:
+
+```bash
+lager watt
+```
+
+## Examples
+
+```bash
+# Read power from watt meter
+lager watt POWER_METER --box my-box
+
+# Read using default net
+lager watt
+
+# List available watt meter nets
+lager watt --box my-box
+```
+
+## Scripting Examples
+
+### Power Threshold Check
+
+```bash
+#!/bin/bash
+# Verify power consumption is within limits
+RESULT=$(lager watt POWER --box my-box)
+echo "$RESULT"
+
+# Extract numeric value for comparison
+POWER=$(echo "$RESULT" | grep -oP '[\d.]+(?= W)')
+if (( $(echo "$POWER > 10" | bc -l) )); then
+    echo "FAIL: Power consumption too high: ${POWER}W"
+    exit 1
+fi
+echo "PASS: Power within limits"
+```
+
+### Power Profiling
+
+```bash
+#!/bin/bash
+# Sample power over time
+BOX="my-box"
+NET="POWER"
+
+echo "timestamp,power_w"
+for i in $(seq 1 10); do
+    RESULT=$(lager watt $NET --box $BOX)
+    POWER=$(echo "$RESULT" | grep -oP '[\d.]+(?= W)')
+    echo "$(date +%s),$POWER"
+    sleep 1
+done
+```
+
+## Troubleshooting
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| Timeout (30s) | Device disconnected or USB issue | Check USB connection; replug device |
+| Connection refused | Box service not running | Check box: `lager hello --box <box>` |
+| Device not found | Watt meter not detected | Verify device is connected: `lager instruments --box <box>` |
+
+## Notes
+
+- Power is returned in watts (W) with 3 decimal places
+- Joulescope JS220 averages measurements over 0.1 seconds for higher precision
+- Net names refer to names assigned when setting up your testbed
+- Use `lager nets` to see available watt meter nets
+- Use `lager instruments --box <box>` to verify the device is detected

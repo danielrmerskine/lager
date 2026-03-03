@@ -1,0 +1,373 @@
+---
+title: Debug
+description: Embedded debug operations for J-Link probes
+---
+
+Control embedded debug operations including device connection, firmware flashing, reset, and memory access using J-Link debug probes.
+
+## Import
+
+```python
+from lager import Net, NetType
+```
+
+## Methods
+
+The Net-based API provides methods for embedded debugging operations.
+
+| Method | Description |
+|--------|-------------|
+| `connect(speed, transport)` | Connect to target device |
+| `disconnect()` | Disconnect from target |
+| `reset(halt)` | Reset the device |
+| `flash(firmware_path)` | Flash firmware to device |
+| `erase()` | Perform full chip erase |
+| `read_memory(address, length)` | Read memory from device |
+| `status()` | Get connection status |
+| `rtt(channel)` | Create RTT session for bidirectional communication |
+
+## Method Reference
+
+### `Net.get(name, type=NetType.Debug)`
+
+Get a debug net by name.
+
+```python
+from lager import Net, NetType
+
+dbg = Net.get('DUT', type=NetType.Debug)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `name` | `str` | Name of the debug net |
+| `type` | `NetType` | Must be `NetType.Debug` |
+
+**Returns:** Debug Net instance
+
+**Note:** The debug net must be configured with the target device name stored in the `channel` field (e.g., 'NRF52840_XXAA', 'R7FA0E107').
+
+### `connect(speed=None, transport=None)`
+
+Connect to the target device.
+
+```python
+# Connect with default settings (4000 kHz, SWD)
+dbg.connect()
+
+# Connect with custom speed
+dbg.connect(speed='adaptive')
+
+# Connect with JTAG
+dbg.connect(transport='JTAG')
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `speed` | `str` | `'4000'` | Interface speed in kHz (e.g., '4000') or 'adaptive' |
+| `transport` | `str` | `'SWD'` | Transport protocol ('SWD' or 'JTAG') |
+
+**Returns:** `dict` - Status dictionary with connection information
+
+### `disconnect()`
+
+Disconnect from the target device.
+
+```python
+dbg.disconnect()
+```
+
+**Returns:** `dict` - Status dictionary
+
+### `reset(halt=False)`
+
+Reset the device.
+
+```python
+# Reset and continue execution
+output = dbg.reset(halt=False)
+print(output)
+
+# Reset and halt for debugging
+output = dbg.reset(halt=True)
+print(output)
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `halt` | `bool` | `False` | Halt CPU after reset |
+
+**Returns:** `str` - Combined output from reset operation
+
+### `flash(firmware_path)`
+
+Flash firmware to the device.
+
+```python
+# Flash a hex file
+output = dbg.flash('/path/to/firmware.hex')
+print(output)
+
+# Flash a binary file (address 0x00000000 assumed)
+output = dbg.flash('/path/to/firmware.bin')
+print(output)
+
+# Flash an ELF file
+output = dbg.flash('/path/to/firmware.elf')
+print(output)
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `firmware_path` | `str` | Path to firmware file (.hex, .bin, or .elf) |
+
+**Returns:** `str` - Combined output from flash operation
+
+**Note:** For .bin files, flash address defaults to 0x00000000.
+
+### `erase()`
+
+Perform full chip erase. This erases ALL flash memory including protection settings.
+
+```python
+# Full chip erase
+output = dbg.erase()
+print(output)
+```
+
+**Returns:** `str` - Combined output from erase operation
+
+### `read_memory(address, length)`
+
+Read memory from the target device.
+
+```python
+# Read 256 bytes starting at address 0x20000000
+data = dbg.read_memory(0x20000000, 256)
+print(f"Read {len(data)} bytes")
+print(data.hex())
+```
+
+**Parameters:**
+
+| Parameter | Type | Description |
+|-----------|------|-------------|
+| `address` | `int` | Starting memory address |
+| `length` | `int` | Number of bytes to read |
+
+**Returns:** `bytes` - Memory data
+
+### `status()`
+
+Get the current connection status.
+
+```python
+status = dbg.status()
+print(f"Connected: {status.get('connected', False)}")
+```
+
+**Returns:** `dict` - Status dictionary with connection information
+
+### `rtt(channel=0)`
+
+Create an RTT (Real-Time Transfer) session for bidirectional communication with the target device.
+
+```python
+# Open RTT session on default channel (0)
+with dbg.rtt() as rtt:
+    # Read debug output
+    data = rtt.read_some(timeout=1.0)
+    if data:
+        print(data.decode('utf-8'))
+
+    # Send commands to device
+    rtt.write(b'test_command\n')
+
+# Use different RTT channel
+with dbg.rtt(channel=1) as rtt:
+    data = rtt.read_some(timeout=2.0)
+```
+
+**Parameters:**
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `channel` | `int` | `0` | RTT channel number (typically 0-15) |
+
+**Returns:** RTT context manager with methods:
+- `read_some(timeout)` - Read available data with timeout (returns bytes or None)
+- `write(data)` - Write data to target (accepts bytes or str)
+
+**Note:** Debug connection must be active before using RTT. Call `connect()` first.
+
+## Examples
+
+### Flash Firmware and Reset
+
+```python
+from lager import Net, NetType
+
+# Get debug net
+dbg = Net.get('DUT', type=NetType.Debug)
+
+# Connect to target
+status = dbg.connect()
+print(f"Connected: {status}")
+
+# Flash firmware
+output = dbg.flash('/etc/lager/firmware/app.hex')
+print(output)
+
+# Reset and run
+output = dbg.reset(halt=False)
+print(output)
+
+# Disconnect
+dbg.disconnect()
+```
+
+### Chip Erase Before Programming
+
+```python
+from lager import Net, NetType
+
+# Get debug net
+dbg = Net.get('DUT', type=NetType.Debug)
+
+# Erase entire chip first (ensures clean state)
+print("Erasing chip...")
+output = dbg.erase()
+print(output)
+
+# Connect after erase
+status = dbg.connect()
+print(f"Connected: {status}")
+
+# Flash new firmware
+output = dbg.flash('/etc/lager/firmware/app.hex')
+print(output)
+
+# Disconnect
+dbg.disconnect()
+```
+
+### Read Memory
+
+```python
+from lager import Net, NetType
+
+dbg = Net.get('DUT', type=NetType.Debug)
+
+# Connect to target
+dbg.connect()
+
+# Read 256 bytes from RAM
+data = dbg.read_memory(0x20000000, 256)
+print(f"Read {len(data)} bytes")
+print(data.hex())
+
+# Disconnect
+dbg.disconnect()
+```
+
+## CLI Commands (Recommended)
+
+For most use cases, the CLI provides a simpler interface:
+
+```bash
+# Start GDB server (connect to target)
+lager debug <net> gdbserver --box <box-name>
+
+# Flash firmware
+lager debug <net> flash --hex firmware.hex --box <box-name>
+
+# Reset device
+lager debug <net> reset --box <box-name>
+
+# Erase flash
+lager debug <net> erase --box <box-name>
+
+# Read memory
+lager debug <net> memrd 0x20000000 256 --box <box-name>
+
+# Disconnect
+lager debug <net> disconnect --box <box-name>
+
+# Check status
+lager debug <net> status --box <box-name>
+```
+
+See the [CLI Debug Reference](/source/reference/cli/debug) for full CLI documentation.
+
+## RTT Streaming
+
+SEGGER Real-Time Transfer (RTT) enables high-speed bidirectional communication with embedded devices during debugging (faster than UART, no timing impact).
+
+```python
+from lager import Net, NetType
+
+# Connect debug probe first
+debug = Net.get('debug1', type=NetType.Debug)
+debug.connect()
+
+# Open RTT session for reading debug output
+with debug.rtt() as rtt:
+    # Read debug output from MCU
+    data = rtt.read_some(timeout=1.0)
+    if data:
+        print(data.decode('utf-8'))
+
+    # Can also write commands to MCU
+    rtt.write(b'start_test\n')
+```
+
+**RTT Methods:**
+
+| Method | Description |
+|--------|-------------|
+| `read_some(timeout)` | Read available data with timeout (returns bytes or None) |
+| `write(data)` | Write data to RTT (accepts bytes or str) |
+
+**CLI Alternative:** Use `lager debug <net> gdbserver --rtt-reset` to stream RTT logs directly.
+
+## Supported Devices
+
+J-Link supports a wide range of ARM Cortex-M and other microcontrollers. Common device names:
+
+| Manufacturer | Device Name | Description |
+|--------------|-------------|-------------|
+| Nordic | `NRF52840_XXAA` | nRF52840 |
+| Nordic | `NRF52833_XXAA` | nRF52833 |
+| Nordic | `NRF5340_XXAA_APP` | nRF5340 Application Core |
+| Renesas | `R7FA0E107` | RA0E1 Series |
+| Renesas | `R7FA2L1` | RA2L1 Series |
+| STMicro | `STM32F103C8` | STM32F1 Series |
+| STMicro | `STM32F407VG` | STM32F4 Series |
+| STMicro | `STM32L476RG` | STM32L4 Series |
+
+For a complete list, see [SEGGER's supported devices](https://www.segger.com/supported-devices/jlink/).
+
+## Supported Hardware
+
+| Debug Probe | Features |
+|-------------|----------|
+| J-Link | JTAG/SWD debugging, flash programming |
+| CMSIS-DAP | SWD debugging (via pyOCD backend) |
+| ST-Link | SWD debugging (via pyOCD backend) |
+
+## Notes
+
+- Debug nets must be configured with the target device name in the `channel` field
+- The CLI (`lager debug`) is recommended for most use cases
+- Python Net API is intended for advanced automation scripts running on the Lager Box
+- Always call `disconnect()` when finished to release the debug probe
+- Use `erase()` to perform a full chip erase and clear protection settings
+- RTT requires an active debug connection (see RTT Streaming section above)

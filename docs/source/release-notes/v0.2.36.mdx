@@ -1,0 +1,120 @@
+---
+title: "Version 0.2.36"
+description: "December 18, 2025"
+---
+
+## <u>Breaking Changes</u>
+
+### Terminology Restructure: Gateway/DUT to Box
+
+This release standardizes terminology across the entire codebase, replacing "gateway" and "DUT" (Device Under Test) with the unified term "box".
+
+**CLI Changes:**
+- The `--dut` option is now `--box` (hidden alias kept for backward compatibility)
+- The `--gateway` option is now `--box` where applicable
+- All help text and error messages now use "box" terminology
+
+**Configuration Changes:**
+- The `DUTS` key in `.lager` configuration files is now `BOXES` (backward compatible - old format is still read)
+- Box storage functions renamed (e.g., `load_duts()` → `load_boxes()`)
+
+**Directory Structure:**
+- `gateway/` directory renamed to `box/`
+- `gateway/lager/lager/` flattened to `box/lager/`
+- `gateway_http_server.py` renamed to `box_http_server.py`
+- `start_lager.sh` renamed to `start_box.sh`
+- Deployment scripts renamed:
+  - `setup_and_deploy_gateway.sh` → `setup_and_deploy_box.sh`
+  - `secure_gateway_firewall.sh` → `secure_box_firewall.sh`
+  - `verify_gateway_security.sh` → `verify_box_security.sh`
+
+**Migration:**
+- Existing `.lager` configuration files will continue to work
+- The `--dut` CLI option works as a hidden alias for `--box`
+- Update any scripts or automation to use the new `--box` option
+
+## <u>Features</u>
+
+### Unified Box Terminology
+- Consistent "box" terminology throughout CLI, Python API, and documentation
+- Simplified mental model for users - one term for all hardware targets
+- Cleaner codebase with consistent naming conventions
+
+### Flattened Directory Structure
+- Removed redundant `gateway/lager/lager/` nesting
+- More intuitive project navigation
+- Cleaner import paths
+
+## <u>Improvements</u>
+
+### Documentation
+- All documentation updated with "box" terminology
+- Unified help text and error messages
+- Updated training data for AI assistants
+
+### Code Quality
+- Removed deprecated modules and unused code
+- Standardized naming conventions throughout codebase
+- Improved code organization and readability
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.2.36
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## <u>Migration Guide</u>
+
+### For CLI Users
+
+Replace `--dut` with `--box` in your commands:
+
+```bash
+# Before
+lager hello --dut my-device
+lager supply voltage --dut my-device 3.3
+
+# After
+lager hello --box my-device
+lager supply voltage --box my-device 3.3
+```
+
+### For Script Authors
+
+Update any automation scripts to use the new flag names:
+
+```bash
+# Before
+BOX_NAME="my-device"
+lager hello --dut $BOX_NAME
+
+# After
+BOX_NAME="my-device"
+lager hello --box $BOX_NAME
+```
+
+### For Box Administrators
+
+Update deployment commands:
+
+```bash
+# Before
+cd deployment
+./setup_and_deploy_gateway.sh <BOX_IP>
+
+# After
+cd deployment
+./setup_and_deploy_box.sh <BOX_IP>
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.2.36/)

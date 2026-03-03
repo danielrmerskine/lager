@@ -1,0 +1,196 @@
+---
+title: Logs
+description: Manage Lager Box logs
+---
+
+View, clean, and manage log files on Lagerboxes.
+
+## Syntax
+
+```bash
+lager logs COMMAND [OPTIONS]
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `size` | Check log file sizes on Lager Box(es) |
+| `clean` | Clean old log files from Lager Box |
+| `docker` | Check Docker container log sizes |
+
+---
+
+## Command Reference
+
+### `size`
+
+Check log file sizes on one or all Lager Boxes.
+
+```bash
+lager logs size [--box BOX] [--verbose]
+```
+
+**Options:**
+- `--box BOX` - Specific Lager Box (if not specified, checks all)
+- `--verbose` / `-v` - Show individual log files
+
+**Examples:**
+```bash
+# Check all Lager Boxes
+lager logs size
+
+# Check specific Lager Box
+lager logs size --box lab-lager-box
+
+# Show individual files
+lager logs size --box lab-lager-box --verbose
+```
+
+Output:
+```
+Log sizes on lab-lager-box:
+  Total: 1.2 GB
+  [WARNING] Log size exceeds 500 MB
+
+  Details (--verbose):
+    /var/log/syslog: 450 MB
+    /var/log/docker.log: 320 MB
+    /var/log/lager/*.log: 430 MB
+```
+
+### `clean`
+
+Remove old log files from a Lager Box.
+
+```bash
+lager logs clean --box BOX [--older-than DAYS] [--yes]
+```
+
+**Options:**
+- `--box BOX` (required) - Lager Box to clean
+- `--older-than DAYS` - Remove logs older than N days (default: 1)
+- `--yes` - Skip confirmation prompt
+
+**Examples:**
+```bash
+# Clean logs older than 1 day (default)
+lager logs clean --box lab-lager-box
+
+# Clean logs older than 7 days
+lager logs clean --box lab-lager-box --older-than 7
+
+# Clean without confirmation
+lager logs clean --box lab-lager-box --yes
+```
+
+Output:
+```
+Cleaning logs older than 1 day on lab-lager-box...
+Removed 15 files
+Space freed: 856 MB
+```
+
+### `docker`
+
+Check Docker container log sizes.
+
+```bash
+lager logs docker --box BOX [--container NAME]
+```
+
+**Options:**
+- `--box BOX` (required) - Lager Box to check
+- `--container NAME` - Specific container (default: all)
+
+**Examples:**
+```bash
+# Check all containers
+lager logs docker --box lab-lager-box
+
+# Check specific container
+lager logs docker --box lab-lager-box --container controller
+```
+
+Output:
+```
+Docker log sizes on lab-lager-box:
+  controller: 8.2 MB
+  python: 12.4 MB
+  hardware_rtc: 3.1 MB
+
+Docker log rotation: max-size=10m, max-file=3
+```
+
+---
+
+## Log Rotation
+
+Docker containers use automatic log rotation:
+- **Maximum size**: 10 MB per file
+- **Maximum files**: 3 (rotates oldest)
+
+This means Docker logs are self-managing and shouldn't grow unbounded.
+
+---
+
+## Size Thresholds
+
+The `size` command uses warning thresholds:
+
+| Size | Status |
+|------|--------|
+| < 500 MB | Normal |
+| 500 MB - 1 GB | Warning |
+| > 1 GB | Critical |
+
+---
+
+## What Gets Cleaned
+
+The `clean` command removes:
+- System logs in `/var/log/`
+- Lager application logs
+- Old rotated log files (`.log.1`, `.log.gz`, etc.)
+
+It does **not** remove:
+- Current log files
+- Docker container logs (managed separately)
+- Files newer than `--older-than` threshold
+
+---
+
+## Automation
+
+Schedule regular log cleaning:
+
+```bash
+# In crontab or CI/CD
+lager logs clean --box lab-lager-box --older-than 7 --yes
+```
+
+---
+
+## Examples
+
+```bash
+# Daily maintenance workflow
+for box in gw1 gw2 gw3; do
+    echo "Checking $box..."
+    lager logs size --box $box
+    lager logs clean --box $box --older-than 3 --yes
+done
+
+# Monitor log growth
+lager logs size  # Check all Lager Boxes
+lager logs docker --box lab-gw  # Check Docker logs
+```
+
+---
+
+## Notes
+
+- Log cleaning requires SSH access to the Lager Box
+- Docker logs are automatically rotated
+- Use `--verbose` to identify large log files
+- Regular cleaning prevents disk space issues

@@ -1,0 +1,398 @@
+---
+title: Battery Simulation
+description: Control battery simulator settings and output
+---
+
+Control and monitor battery simulator Nets (Keithley 2281S) through the Lager CLI for battery simulation and testing.
+
+## Syntax
+
+```bash
+lager battery [OPTIONS] [NETNAME] COMMAND [ARGS]...
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `mode` | Set or read battery simulation mode (static/dynamic) |
+| `set` | Initialize battery simulator mode |
+| `soc` | Set or read state of charge (%) |
+| `voc` | Set or read open circuit voltage (V) |
+| `batt-full` | Set or read fully charged voltage (V) |
+| `batt-empty` | Set or read fully discharged voltage (V) |
+| `capacity` | Set or read battery capacity (Ah) |
+| `current-limit` | Set or read max charge/discharge current (A) |
+| `ovp` | Set or read over-voltage protection (V) |
+| `ocp` | Set or read over-current protection (A) |
+| `model` | Set or read battery model |
+| `state` | Get comprehensive battery state |
+| `enable` | Enable battery simulator output |
+| `disable` | Disable battery simulator output |
+| `clear` | Clear all protection trip conditions |
+| `clear-ovp` | Clear OVP trip condition |
+| `clear-ocp` | Clear OCP trip condition |
+| `tui` | Launch interactive terminal UI |
+
+## Listing Battery Nets
+
+When invoked with only `--box` and no subcommand, lists all battery nets on the Lager Box:
+
+```bash
+lager battery --box my-lager-box
+```
+
+## Command Reference
+
+### `mode`
+
+Set or read battery simulation mode type.
+
+```bash
+lager battery NETNAME mode [static|dynamic] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `[static|dynamic]` - Mode type (omit to read current mode)
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Examples:**
+```bash
+# Read current mode
+lager battery batt1 mode --box my-lager-box
+
+# Set static mode
+lager battery batt1 mode static --box my-lager-box
+```
+
+### `set`
+
+Initialize battery simulator mode. Prepares the instrument for battery simulation.
+
+```bash
+lager battery NETNAME set [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `soc`
+
+Set or read battery state of charge in percent.
+
+```bash
+lager battery NETNAME soc [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `VALUE` - State of charge percentage (0-100), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Examples:**
+```bash
+# Read current SOC
+lager battery batt1 soc --box my-lager-box
+
+# Set SOC to 80%
+lager battery batt1 soc 80 --box my-lager-box
+```
+
+### `voc`
+
+Set or read battery open circuit voltage in volts.
+
+```bash
+lager battery NETNAME voc [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `VALUE` - Open-circuit voltage (volts), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `batt-full`
+
+Set or read battery fully charged voltage in volts.
+
+```bash
+lager battery NETNAME batt-full [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `VALUE` - Voltage at 100% SOC (volts), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `batt-empty`
+
+Set or read battery fully discharged voltage in volts.
+
+```bash
+lager battery NETNAME batt-empty [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `VALUE` - Voltage at 0% SOC (volts), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `capacity`
+
+Set or read battery capacity limit in amp-hours.
+
+```bash
+lager battery NETNAME capacity [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `VALUE` - Battery capacity (Ah), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `current-limit`
+
+Set or read maximum charge/discharge current in amps.
+
+```bash
+lager battery NETNAME current-limit [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `VALUE` - Maximum current limit (amps), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `ovp`
+
+Set or read over-voltage protection limit in volts.
+
+```bash
+lager battery NETNAME ovp [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `VALUE` - OVP limit (volts), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `ocp`
+
+Set or read over-current protection limit in amps.
+
+```bash
+lager battery NETNAME ocp [VALUE] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `VALUE` - OCP limit (amps), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `model`
+
+Set or read battery model preset.
+
+```bash
+lager battery NETNAME model [PARTNUMBER] [OPTIONS]
+```
+
+**Arguments:**
+- `NETNAME` - Name of the battery Net
+- `PARTNUMBER` - Battery model (e.g., 18650, nimh, lead-acid), omit to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Supported Models:**
+- `18650` - Standard lithium-ion cell
+- `nimh` - Nickel-metal hydride
+- `lead-acid` - Lead acid battery
+- Custom part numbers from your battery library
+
+### `state`
+
+Get comprehensive battery state including all current settings and measurements.
+
+```bash
+lager battery NETNAME state [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example Output:**
+```
+Battery State:
+  Mode: static
+  SOC: 80%
+  VOC: 3.7V
+  Voltage Range: 3.0V - 4.2V
+  Capacity: 2.5Ah
+  Current Limit: 1.5A
+  OVP: 4.5V
+  OCP: 2.0A
+  Output: Enabled
+```
+
+### `enable`
+
+Enable battery simulator output.
+
+```bash
+lager battery NETNAME enable [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--yes` - Skip confirmation prompt
+
+### `disable`
+
+Disable battery simulator output.
+
+```bash
+lager battery NETNAME disable [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--yes` - Skip confirmation prompt
+
+### `clear`
+
+Clear all protection trip conditions (OVP and OCP).
+
+```bash
+lager battery NETNAME clear [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `clear-ovp`
+
+Clear over-voltage protection trip condition.
+
+```bash
+lager battery NETNAME clear-ovp [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `clear-ocp`
+
+Clear over-current protection trip condition.
+
+```bash
+lager battery NETNAME clear-ocp [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+### `tui`
+
+Launch interactive terminal UI for real-time monitoring and control.
+
+```bash
+lager battery NETNAME tui [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**TUI Features:**
+- Real-time voltage/current display
+- SOC adjustment slider
+- Enable/disable controls
+- Protection status indicators
+- Keyboard navigation
+
+## Examples
+
+```bash
+# List all battery nets
+lager battery --box my-lager-box
+
+# Configure a Li-ion cell simulation
+lager battery batt1 batt-full 4.2 --box my-lager-box
+lager battery batt1 batt-empty 3.0 --box my-lager-box
+lager battery batt1 capacity 2.5 --box my-lager-box
+lager battery batt1 current-limit 1.5 --box my-lager-box
+
+# Set protection limits
+lager battery batt1 ovp 4.5 --box my-lager-box
+lager battery batt1 ocp 2.0 --box my-lager-box
+
+# Set initial state and enable
+lager battery batt1 soc 80 --box my-lager-box
+lager battery batt1 enable --yes --box my-lager-box
+
+# Check battery status
+lager battery batt1 state --box my-lager-box
+
+# Read current SOC
+lager battery batt1 soc --box my-lager-box
+
+# Clear protection faults
+lager battery batt1 clear --box my-lager-box
+
+# Use a preset model
+lager battery batt1 model 18650 --box my-lager-box
+
+# Launch interactive UI
+lager battery batt1 tui --box my-lager-box
+
+# Disable when done
+lager battery batt1 disable --yes --box my-lager-box
+```
+
+## Supported Hardware
+
+| Instrument | Description |
+|------------|-------------|
+| Keithley 2281S | Battery Simulator with dynamic modeling |
+
+## Notes
+
+- All value commands (soc, voc, ovp, etc.) read the current value when called without an argument
+- Use `--yes` flag to skip confirmation prompts for enable/disable
+- Protection limits help prevent damage during testing
+- SOC can be set from 0-100% for realistic battery simulation
+- The `state` command provides a comprehensive view of all settings
+- Mode can be `static` (fixed parameters) or `dynamic` (SOC-based modeling)
+- The TUI allows concurrent CLI access while monitoring
+
+## See Also
+
+- [Power Supply](/source/reference/cli/supply) -- Standard power supply control
+- [Electronic Load](/source/reference/cli/eload) -- Programmable electronic loads
+- [Python Battery API](/source/reference/python/battery) -- Automate battery simulation in Python scripts

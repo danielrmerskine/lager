@@ -1,0 +1,111 @@
+---
+title: Setting Up Your Instruments
+description: Configure and manage instruments connected to a Lager Box
+---
+
+Before you can use instruments with the Lager Client (CLI or Python Library), you may need to perform a minimal setup to identify and organize connected devices.
+
+---
+
+## View Connected Instruments
+
+To view all instruments currently connected to a specific Lager Box, run:
+
+```bash
+lager instruments --box my-lager-box
+```
+
+This command detects and lists all physical instruments connected to the Lager Box via USB or network.
+
+**Example output:**
+
+```
+┌─────────────────────────┬──────────┬────────────────────────────────┐
+│ Instrument              │ Channels │ Address                        │
+├─────────────────────────┼──────────┼────────────────────────────────┤
+│ Rigol_DP832             │ CH1,CH2  │ USB0::0x1AB1::0x0E11::DP8...   │
+│ LabJack_T7              │ AIN0-13  │ T7-12345678                    │
+│ Aardvark                │ I2C,SPI  │ USB0::0x0403::0xE0D0::...      │
+│ Segger_JLink            │ SWD      │ USB::001::002                  │
+└─────────────────────────┴──────────┴────────────────────────────────┘
+```
+
+To view configured nets (logical mappings to instruments), use:
+
+```bash
+lager nets --box my-lager-box
+```
+
+This shows the nets you've created, their types, and which instruments they're mapped to.
+
+### Example Output:
+
+```
+Name      Net Type      Instrument        Channel       Address
+===============================================================================================
+ADC_0     adc           LabJack_T7        AIN0          USB0::0x0CD5::0x0007::::INSTR
+ARM       arm           Rotrix_Dexarm     /dev/ttyACM0  USB0::0x0483::0x5740::206E399E4753::INSTR
+GPIO_0    gpio          LabJack_T7        FIO3          USB0::0x0CD5::0x0007::::INSTR
+GPIO_1    gpio          LabJack_T7        FIO2          USB0::0x0CD5::0x0007::::INSTR
+GPIO_2    gpio          LabJack_T7        FIO1          USB0::0x0CD5::0x0007::::INSTR
+GPIO_3    gpio          LabJack_T7        FIO0          USB0::0x0CD5::0x0007::::INSTR
+I2C_0     i2c           Aardvark          --            USB0::0x0403::0xE0D0::2420032::INSTR
+SPI_0     spi           Aardvark          --            USB0::0x0403::0xE0D0::2420032::INSTR
+TEMP_0    thermocouple  Phidget           0             USB0::0x06C2::0x0046::751053::INSTR
+TEMP_1    thermocouple  Phidget           1             USB0::0x06C2::0x0046::751053::INSTR
+UART      uart          SiLabs_CP210x     0001          USB0::0x10C4::0xEA60::0001::INSTR
+USB_0     usb           Acroname_8Port    0             USB0::0x24FF::0x0013::807D0C12::INSTR
+USB_1     usb           Acroname_8Port    1             USB0::0x24FF::0x0013::807D0C12::INSTR
+USB_2     usb           Acroname_8Port    2             USB0::0x24FF::0x0013::807D0C12::INSTR
+USB_3     usb           Acroname_8Port    3             USB0::0x24FF::0x0013::807D0C12::INSTR
+USB_4     usb           Acroname_8Port    4             USB0::0x24FF::0x0013::807D0C12::INSTR
+USB_5     usb           Acroname_8Port    5             USB0::0x24FF::0x0013::807D0C12::INSTR
+USB_6     usb           Acroname_8Port    6             USB0::0x24FF::0x0013::807D0C12::INSTR
+USB_7     usb           Acroname_8Port    7             USB0::0x24FF::0x0013::807D0C12::INSTR
+WEBCAM    webcam        Logitech_BRIO_HD  /dev/video0   USB0::0x046D::0x085E::20786B34::INSTR
+```
+
+## Automatic Net Creation
+
+When an instrument is plugged into a Lager Box, Lager automatically creates a default Net for each function the instrument supports.
+- A simple, single-function device like a power supply will create one `Supply` Net.
+- A multi-function device like a LabJack T7 DAQ will create several Nets: one for `GPIO`, one for `ADC`, one for `DAC`, and (if configured) one each for `I2C` and `SPI`.
+- An I2C/SPI adapter like a Total Phase Aardvark will create both an `I2C` Net and an `SPI` Net, since the adapter supports both protocols.
+
+For instruments that support multiple channels of the same type (e.g., a 4-channel oscilloscope), you can assign and configure Nets for each channel individually.
+
+---
+
+## Modify or Assign Nets Using the TUI
+
+For instruments that support multiple channels (e.g. LabJack, PicoScope), you can assign new Nets using the interactive TUI (text user interface). You can also re-name existing Nets.
+
+To launch the Net TUI, run:
+
+```bash
+lager nets tui --box my-lager-box
+```
+
+### Within the TUI, you can:
+
+- **Add** new Nets
+- **Rename** existing Nets
+- **Delete** unused Nets
+
+---
+
+## Debug Nets
+
+For debug instruments (e.g., Segger J-Link, ST-Link), you must specify the target MCU when creating the net.
+
+This is easily done through the TUI, as it will prompt you to input the MCU type.
+
+> **Important:** The MCU type must match a valid target device supported by your debug probe. If the MCU type is not recognized, the debugger will not function correctly.
+
+---
+
+## Next Steps
+
+With your instruments configured, start controlling them:
+
+- **[Interacting With Nets](/source/getting-started/interacting-with-nets)** -- Send commands to your instruments via CLI or Python

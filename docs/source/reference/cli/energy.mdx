@@ -1,0 +1,183 @@
+---
+title: Energy Analyzer
+description: Measure energy, charge, and power statistics using Joulescope JS220
+---
+
+Integrate energy and charge over time, or compute current/voltage/power statistics, using a Joulescope JS220 connected to a Lager Box.
+
+## Syntax
+
+```bash
+lager energy [OPTIONS] NET_NAME
+lager energy stats [OPTIONS] NET_NAME
+```
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `lager energy` | Integrate energy and charge over a duration |
+| `lager energy stats` | Compute mean/min/max/std for current, voltage, and power |
+
+---
+
+## `lager energy`
+
+Integrate current and power over a configurable duration. Returns energy in joules and watt-hours, and charge in coulombs and amp-hours.
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--duration FLOAT` | Integration duration in seconds (default: 10.0) |
+| `--help` | Show help message and exit |
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NET_NAME` | Name of the energy-analyzer net (optional if default is set) |
+
+### Output
+
+```
+Energy 'POWER_METER' (10.0s):
+  Energy:  12.500 mWh  (45.000 mJ)
+  Charge:  3.472 mAh   (12.500 mC)
+```
+
+### Examples
+
+```bash
+# Integrate over the default 10 seconds
+lager energy POWER_METER --box my-box
+
+# Integrate over 60 seconds
+lager energy POWER_METER --box my-box --duration 60
+
+# Use the default net
+lager energy
+```
+
+---
+
+## `lager energy stats`
+
+Compute mean, minimum, maximum, and standard deviation for current, voltage, and power over a configurable duration.
+
+### Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--duration FLOAT` | Measurement duration in seconds (default: 1.0) |
+| `--help` | Show help message and exit |
+
+### Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NET_NAME` | Name of the energy-analyzer net (optional if default is set) |
+
+### Output
+
+```
+Stats 'POWER_METER' (1.0s):
+  Current (A):  mean=0.015200  min=0.014900  max=0.015600  std=0.000120
+  Voltage (V):  mean=3.301000  min=3.300500  max=3.301500  std=0.000200
+  Power   (W):  mean=0.050175  min=0.049185  max=0.051516  std=0.000400
+```
+
+### Examples
+
+```bash
+# Stats over the default 1 second
+lager energy stats POWER_METER --box my-box
+
+# Stats over 5 seconds for better averaging
+lager energy stats POWER_METER --box my-box --duration 5
+
+# Use the default net
+lager energy stats
+```
+
+---
+
+## Default Net
+
+To avoid specifying the net name each time:
+
+```bash
+lager defaults add --energy-net POWER_METER
+```
+
+Then:
+
+```bash
+lager energy
+lager energy stats
+```
+
+## Supported Hardware
+
+| Manufacturer | Model | Net Type | USB VID:PID |
+|--------------|-------|----------|-------------|
+| Joulescope | JS220 | `energy-analyzer` | `16d0:10ba` |
+
+The `energy-analyzer` net type is exclusive to the Joulescope JS220. For instantaneous power readings only, see [Watt Meter](/source/reference/cli/watt).
+
+## Scripting Examples
+
+### Energy Budget Verification
+
+```bash
+#!/bin/bash
+# Verify a device's energy consumption during a 10-second test
+RESULT=$(lager energy POWER_METER --box my-box --duration 10)
+echo "$RESULT"
+
+# Extract mWh value for pass/fail
+MWH=$(echo "$RESULT" | grep -oP '[\d.]+(?= mWh)')
+if (( $(echo "$MWH > 50" | bc -l) )); then
+    echo "FAIL: Energy consumption too high: ${MWH} mWh"
+    exit 1
+fi
+echo "PASS: Energy within budget"
+```
+
+### Sleep Current Verification
+
+```bash
+#!/bin/bash
+# Check sleep current is below 100 uA
+RESULT=$(lager energy stats POWER_METER --box my-box --duration 5)
+echo "$RESULT"
+
+# Extract mean current in amps, convert to uA
+CURRENT_A=$(echo "$RESULT" | grep "Current" | grep -oP 'mean=\K[\d.]+')
+CURRENT_UA=$(echo "$CURRENT_A * 1000000" | bc -l)
+
+if (( $(echo "$CURRENT_UA > 100" | bc -l) )); then
+    echo "FAIL: Sleep current ${CURRENT_UA} uA exceeds 100 uA limit"
+    exit 1
+fi
+echo "PASS: Sleep current ${CURRENT_UA} uA"
+```
+
+## Troubleshooting
+
+| Error | Cause | Fix |
+|-------|-------|-----|
+| Timeout (120s) | Device disconnected or measurement too long | Check USB connection; reduce `--duration` |
+| Connection refused | Box service not running | Check box: `lager hello --box <box>` |
+| Device not found | Joulescope JS220 not detected | Verify device is connected: `lager instruments --box <box>` |
+| Net not found | Net not configured as `energy-analyzer` | Check net type: `lager nets --box <box>` |
+
+## Notes
+
+- The default command timeout is 120 seconds to accommodate long integrations
+- Joulescope JS220 samples continuously; accuracy improves with longer durations
+- Use `lager instruments --box <box>` to verify the JS220 is detected (VID `16d0` PID `10ba`)
+- Net names refer to names assigned when configuring your testbed
+- Use `lager nets` to see available energy-analyzer nets

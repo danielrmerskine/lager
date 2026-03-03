@@ -1,0 +1,104 @@
+---
+title: Thermocouple
+description: Read thermocouple temperature measurements
+---
+
+Read thermocouple temperature values from thermocouple nets through the Lager CLI for temperature measurement and monitoring.
+
+## Syntax
+
+```bash
+lager thermocouple [NETNAME] [OPTIONS]
+```
+
+## Arguments
+
+| Argument | Description |
+|----------|-------------|
+| `NETNAME` | Thermocouple net name (optional if default is set) |
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+---
+
+## Usage
+
+```bash
+# Read temperature from thermocouple net
+lager thermocouple TEMP_SENSOR --box my-lager-box
+
+# List available thermocouple nets (when no net specified)
+lager thermocouple --box my-lager-box
+
+# Using default net
+lager thermocouple
+```
+
+---
+
+## Output
+
+Returns temperature in degrees Celsius:
+
+```bash
+$ lager thermocouple TEMP_SENSOR --box my-lager-box
+23.5
+```
+
+---
+
+## Supported Hardware
+
+| Device | Type | Range |
+|--------|------|-------|
+| Phidget TMP1101 | 4-channel thermocouple | -200°C to +1300°C |
+
+---
+
+## Examples
+
+```bash
+# Read temperature from sensor
+lager thermocouple TEMP_SENSOR --box lab-gw
+
+# Monitor multiple thermocouples
+lager thermocouple TC1 --box lab-gw
+lager thermocouple TC2 --box lab-gw
+lager thermocouple TC3 --box lab-gw
+
+# Use in shell script
+TEMP=$(lager thermocouple OVEN_TC --box lab-gw)
+if (( $(echo "$TEMP > 100" | bc -l) )); then
+    echo "Temperature exceeded 100°C!"
+fi
+```
+
+---
+
+## Creating Thermocouple Nets
+
+```bash
+# Create a thermocouple net
+lager nets create TEMP_SENSOR thermocouple 0 PHIDGET_SERIAL --box my-lager-box
+```
+
+Where:
+- `TEMP_SENSOR` - Net name
+- `thermocouple` - Net type
+- `0` - Channel number (0-3 for 4-channel Phidget)
+- `PHIDGET_SERIAL` - Phidget device serial number
+
+---
+
+## Notes
+
+- Net names refer to names assigned when setting up your testbed
+- Results are returned in degrees Celsius (°C)
+- Only works with nets of type `thermocouple`
+- If no net is specified and no default is set, lists available thermocouple nets
+- Default net can be set with `lager defaults add --thermocouple-net`

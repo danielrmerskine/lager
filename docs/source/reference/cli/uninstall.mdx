@@ -1,0 +1,89 @@
+---
+title: Uninstall
+description: Remove Lager box code from a box
+---
+
+Remove the Lager box software, Docker containers, and supporting files from a box.
+
+## Syntax
+
+```bash
+lager uninstall [OPTIONS]
+```
+
+## Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `--box TEXT` | string | | Box name (uses stored IP and username from `.lager` config) |
+| `--ip TEXT` | string | | Target box IP address |
+| `--user TEXT` | string | `lagerdata` | SSH username |
+| `--keep-config` | flag | | Preserve `/etc/lager` directory (saved nets, box ID, etc.) |
+| `--keep-docker-images` | flag | | Remove containers only, keep Docker images |
+| `--all` | flag | | Remove everything including udev rules, sudoers, third-party tools, and legacy deploy key |
+| `--yes` | flag | | Skip confirmation prompts |
+| `--help` | | | Show help message and exit |
+
+Either `--box` or `--ip` is required.
+
+## What Gets Removed
+
+### Default Removal
+
+| Component | Description |
+|-----------|-------------|
+| Docker containers | Stops and removes the `lager` container |
+| Docker images | Removes images and build cache (unless `--keep-docker-images`) |
+| `~/box` directory | Box code and services |
+| `/etc/lager` directory | Saved nets, box ID, version (unless `--keep-config`) |
+
+### With `--all`
+
+In addition to the above:
+
+| Component | Description |
+|-----------|-------------|
+| Udev rules | `/etc/udev/rules.d/lager-*.rules` |
+| Sudoers config | `/etc/sudoers.d/lagerdata-udev` |
+| `~/third_party` | J-Link, custom binaries |
+| Legacy deploy key | `~/.ssh/lager_deploy_key*` and SSH config entry (from pre-open-source deployments) |
+
+## Examples
+
+```bash
+# Basic uninstall
+lager uninstall --ip 192.168.1.100
+
+# Uninstall but keep saved nets
+lager uninstall --ip 192.168.1.100 --keep-config
+
+# Uninstall but keep Docker images for faster reinstall
+lager uninstall --ip 192.168.1.100 --keep-docker-images
+
+# Complete cleanup
+lager uninstall --ip 192.168.1.100 --all
+
+# Non-interactive uninstall of a stored box
+lager uninstall --box my-box --yes
+```
+
+## Uninstall Flow
+
+1. **Resolve target** - Looks up box IP from `--box` name or uses `--ip` directly
+2. **Verify SSH** - Tests key-based authentication, falls back to password if needed
+3. **Show summary** - Lists what will be removed based on flags
+4. **Confirm** - Requires explicit confirmation (unless `--yes`)
+5. **Remove step by step:**
+   - Stop and remove Docker containers
+   - Clean Docker images and build cache
+   - Remove `~/box` directory
+   - Remove `/etc/lager` directory
+   - Remove additional components (if `--all`)
+6. **Report** - Confirms completion and suggests `--all` if not used
+
+## Notes
+
+- Each removal step continues even if a previous step fails, so partial uninstalls are possible
+- Use `--keep-config` if you plan to reinstall and want to preserve your net configuration
+- Use `--keep-docker-images` for a faster reinstall since images won't need to be rebuilt
+- After uninstalling, use `lager install` to redeploy

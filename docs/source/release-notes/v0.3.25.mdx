@@ -1,0 +1,53 @@
+---
+title: "Version 0.3.25"
+description: "February 18, 2026"
+---
+
+## <u>Features</u>
+
+### FT232H Instrument Support (SPI, I2C, GPIO)
+
+Full support for the FTDI C232HM-DDHSL-0 cable as a Lager instrument, including:
+
+- **SPI**: All 4 modes, frequencies 100kHz-10MHz, word sizes 8/16/32, LSB/MSB bit order, configurable CS polarity, and manual CS via external GPIO
+- **I2C**: Scan, read, write, and transfer at standard (100kHz) and fast (400kHz) modes with NACK detection
+- **GPIO**: Digital output, input, toggle on pins AD4-AD7 with file-based state caching across CLI commands
+- Auto-discovery via `lager instruments` and net creation via `lager nets add-all`
+
+### GPIO Hold Mode
+
+- New `--hold` flag for `lager gpo` maintains the output state until Ctrl+C:
+  ```bash
+  lager gpo gpio1 high --hold --box <BOX>
+  ```
+
+## <u>Bug Fixes</u>
+
+- Fixed FT232H GPIO USB "Resource busy" error after Ctrl+C: the USB interface is now properly released when exiting hold mode, preventing subsequent commands from failing
+- Fixed LabJack T7 SPI `SPI_OPTIONS` bit 0 (auto CS) not reliably driving the CS pin: switched to manual GPIO-based CS assert/deassert for all LabJack SPI transactions
+- Fixed SPI configuration not persisting between CLI commands: added `_persist_params()` to SPI dispatcher matching the I2C pattern
+
+## <u>Improvements</u>
+
+- FT232H GPIO uses read-modify-write to avoid clobbering other pins' output state
+- FT232H GPIO output latch is written before enabling pin direction to prevent brief glitches after USB reset
+- FT232H SPI and I2C include USB disconnect recovery with exponential backoff retry logic
+- LabJack T7 SPI warm-up sequence no longer uses auto CS to avoid spurious CS assertions to connected devices
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.25
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.25/)

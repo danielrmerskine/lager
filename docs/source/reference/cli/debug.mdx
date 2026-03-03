@@ -1,0 +1,522 @@
+---
+title: Debug
+description: Debug firmware and manage debug sessions
+---
+
+Control debugger operations for embedded development including flashing, GDB server management, memory access, and RTT logging.
+
+## Syntax
+
+```bash
+lager debug [OPTIONS] [NET_NAME] COMMAND [ARGS]...
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `gdbserver` | Start JLinkGDBServer for debugging |
+| `disconnect` | Stop JLinkGDBServer |
+| `flash` | Flash firmware to target |
+| `reset` | Reset target device |
+| `erase` | Erase all flash memory |
+| `memrd` | Read memory from target |
+| `status` | Show debug net status |
+| `health` | Check debug service health |
+
+## Command Reference
+
+### `gdbserver`
+
+Start JLinkGDBServer for remote debugging. This is the primary command to establish a debug connection.
+
+```bash
+lager debug [NET_NAME] gdbserver [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--force / --no-force` - Force new connection (default: reuse existing)
+- `--halt / --no-halt` - Halt device when connecting (default: no-halt)
+- `--speed KHZ` - SWD/JTAG speed in kHz (e.g., 100, 4000) or "adaptive"
+- `--quiet` - Suppress informational messages
+- `--json` - Output results in JSON format
+- `--rtt` - Automatically stream RTT logs after starting GDB server
+- `--rtt-reset` - Reset device then stream RTT (captures boot sequence)
+- `--reset` - Reset device after starting GDB server
+- `--gdb-port PORT` - GDB server port (default: 2331)
+
+**Examples:**
+
+```bash
+# Start GDB server on default debug net
+lager debug gdbserver --box my-lager-box
+
+# Start GDB server on specific net with halt
+lager debug debug1 gdbserver --box my-lager-box --halt
+
+# Start GDB server and stream RTT logs
+lager debug gdbserver --box my-lager-box --rtt
+
+# Capture boot sequence via RTT
+lager debug gdbserver --box my-lager-box --rtt-reset
+
+# Use custom speed and port
+lager debug gdbserver --box my-lager-box --speed 4000 --gdb-port 3333
+```
+
+**Connecting with GDB:**
+
+```bash
+# After starting gdbserver, connect with:
+arm-none-eabi-gdb firmware.elf -ex 'target remote <BOX_IP>:2331'
+```
+
+### `disconnect`
+
+Stop JLinkGDBServer and free debug resources.
+
+```bash
+lager debug [NET_NAME] disconnect [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--keep-server` - Keep JLinkGDBServer running for external connections
+
+**Examples:**
+
+```bash
+# Stop GDB server completely
+lager debug disconnect --box my-lager-box
+
+# Disconnect but keep server running
+lager debug disconnect --box my-lager-box --keep-server
+```
+
+### `flash`
+
+Flash firmware to target. Supports Intel HEX, ELF, and binary file formats.
+
+```bash
+lager debug [NET_NAME] flash [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--hex FILE` - Path to Intel HEX file
+- `--elf FILE` - Path to ELF executable
+- `--bin ADDRESS FILE` - Path to binary file with load address
+- `--verbose` - Show detailed J-Link output
+- `--force-reconnect` - Force clean reconnect before flash
+- `--erase` - Erase all flash before flashing (ensures clean state)
+- `--halt / --no-halt` - Halt device after flashing (default: no-halt)
+
+**Examples:**
+
+```bash
+# Flash Intel HEX file
+lager debug flash --hex build/firmware.hex --box my-lager-box
+
+# Flash ELF file
+lager debug flash --elf build/firmware.elf --box my-lager-box
+
+# Flash binary with base address
+lager debug flash --bin 0x08000000 build/firmware.bin --box my-lager-box
+
+# Flash with full erase first (recommended for RTT)
+lager debug flash --hex build/firmware.hex --erase --box my-lager-box
+
+# Flash and halt for debugging
+lager debug flash --elf build/firmware.elf --halt --box my-lager-box
+
+# Verbose output for troubleshooting
+lager debug flash --hex build/firmware.hex --verbose --box my-lager-box
+```
+
+### `reset`
+
+Reset the target device.
+
+```bash
+lager debug [NET_NAME] reset [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--halt / --no-halt` - Halt after reset (default: no-halt)
+- `--force-reconnect` - Force clean reconnect before reset
+
+**Examples:**
+
+```bash
+# Reset and run
+lager debug reset --box my-lager-box
+
+# Reset and halt (for debugging)
+lager debug reset --halt --box my-lager-box
+
+# Force clean state before reset
+lager debug reset --force-reconnect --box my-lager-box
+```
+
+### `erase`
+
+Erase all flash memory on target. **This is a destructive operation.**
+
+```bash
+lager debug [NET_NAME] erase [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--speed KHZ` - SWD/JTAG speed in kHz (default: 4000)
+- `--yes` - Skip confirmation prompt
+- `--quiet` - Suppress warning messages
+- `--json` - Output results in JSON format
+- `--halt / --no-halt` - Halt after erase (default: no-halt)
+
+**Examples:**
+
+```bash
+# Erase with confirmation prompt
+lager debug erase --box my-lager-box
+
+# Erase without confirmation
+lager debug erase --box my-lager-box --yes
+
+# Erase and halt afterward
+lager debug erase --box my-lager-box --yes --halt
+```
+
+### `memrd`
+
+Read memory from the target device.
+
+```bash
+lager debug [NET_NAME] memrd START_ADDR LENGTH [OPTIONS]
+```
+
+**Arguments:**
+- `START_ADDR` - Starting memory address (e.g., 0x20000000)
+- `LENGTH` - Number of bytes to read
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--json` - Output results in JSON format
+- `--halt / --no-halt` - Halt device during read (default: no-halt)
+
+**Examples:**
+
+```bash
+# Read 16 bytes of SRAM
+lager debug memrd 0x20000000 16 --box my-lager-box
+
+# Read with device halted (more reliable)
+lager debug memrd 0x20000000 64 --halt --box my-lager-box
+
+# Output as JSON
+lager debug memrd 0x08000000 32 --json --box my-lager-box
+```
+
+**Output:**
+
+```
+0x20000000:	0x00	0x01	0x02	0x03	0x04	0x05	0x06	0x07
+0x20000008:	0x08	0x09	0x0a	0x0b	0x0c	0x0d	0x0e	0x0f
+```
+
+### `status`
+
+Show debug net status and configuration information.
+
+```bash
+lager debug [NET_NAME] status [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Examples:**
+
+```bash
+lager debug status --box my-lager-box
+lager debug debug1 status --box my-lager-box
+```
+
+**Output:**
+
+```
+Debug Net Information:
+  Name: debug1
+  Device Type: STM32F407VG
+  Architecture: ARM Cortex-M4
+  Probe: J-Link
+  Connected: True
+```
+
+### `health`
+
+Check debug service health and resource usage.
+
+```bash
+lager debug [NET_NAME] health [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--verbose` - Show detailed health information
+
+**Examples:**
+
+```bash
+# Basic health check
+lager debug health --box my-lager-box
+
+# Detailed health information
+lager debug health --box my-lager-box --verbose
+```
+
+**Output (verbose):**
+
+```
+Debug Service Health:
+  Status: healthy
+  Version: 1.2.0
+  Uptime: 2.5 days (216000s)
+  J-Link Running: True
+  J-Link PID: 12345
+  GDB Controllers Cached: 1
+  Active Connections: 1
+```
+
+## Listing Debug Nets
+
+When invoked with only `--box` and no subcommand, lists all debug nets on the Lager Box:
+
+```bash
+lager debug --box my-lager-box
+```
+
+**Output:**
+
+```
+Name    Net Type  Instrument  Channel      Address
+debug1  debug     J-Link      STM32F407VG  USB::001::002
+debug2  debug     CMSIS-DAP   nRF52840     USB::001::003
+```
+
+## RTT (Real-Time Transfer) Logging
+
+RTT provides low-latency logging over the debug probe. Use the `--rtt` or `--rtt-reset` flags with `gdbserver`:
+
+```bash
+# Stream RTT after connecting
+lager debug gdbserver --box my-lager-box --rtt
+
+# Reset device and capture boot messages
+lager debug gdbserver --box my-lager-box --rtt-reset
+
+# Pipe to defmt-print for formatted output
+lager debug gdbserver --box my-lager-box --rtt | defmt-print -e firmware.elf
+```
+
+## Typical Workflows
+
+### Development Cycle
+
+```bash
+# Flash and debug
+lager debug flash --elf build/app.elf --box my-lager-box
+lager debug gdbserver --box my-lager-box --halt
+
+# In another terminal, connect GDB
+arm-none-eabi-gdb build/app.elf -ex 'target remote <BOX_IP>:2331'
+```
+
+### RTT Debugging
+
+```bash
+# Flash with erase for clean RTT state
+lager debug flash --elf build/app.elf --erase --box my-lager-box
+
+# Start GDB server and stream RTT with boot capture
+lager debug gdbserver --box my-lager-box --rtt-reset
+```
+
+### Memory Inspection
+
+```bash
+# Halt device and read memory
+lager debug gdbserver --box my-lager-box --halt
+lager debug memrd 0x20000000 256 --box my-lager-box
+```
+
+### Clean Up
+
+```bash
+# Stop debug session
+lager debug disconnect --box my-lager-box
+
+# Full chip erase before new project
+lager debug erase --box my-lager-box --yes
+```
+
+## JLinkScript Support
+
+JLinkScript files allow you to customize J-Link debug probe behavior for specific hardware configurations. They can handle custom reset sequences, clock initialization, pin configurations, and other device-specific operations that the standard J-Link connection flow does not cover.
+
+### Configuring JLinkScript
+
+There are three ways to attach a J-Link script to a debug net:
+
+**1. During net creation:**
+
+```bash
+lager nets create debug1 debug STM32F407VG USB::001::002 \
+  --jlink-script ./my_device.JLinkScript --box my-lager-box
+```
+
+**2. On an existing net:**
+
+```bash
+lager nets set-script debug1 ./my_device.JLinkScript --box my-lager-box
+```
+
+**3. Per-project in `.lager` config:**
+
+```json
+{
+  "DEBUG": {
+    "debug1": "./scripts/my_device.JLinkScript"
+  }
+}
+```
+
+### Script Priority
+
+When both a net-level script (stored on the box via `set-script`) and a project-level script (in `.lager` config) exist, the project-level script takes priority. This allows you to override the box-stored script for specific projects.
+
+### Managing Scripts
+
+```bash
+# View attached script
+lager nets show-script debug1 --box my-lager-box
+
+# Save script to local file
+lager nets show-script debug1 --box my-lager-box > script.JLinkScript
+
+# Remove script from net
+lager nets remove-script debug1 --box my-lager-box
+```
+
+Once attached, the script is used automatically for all debug operations (connect, flash, erase, reset) without any additional flags.
+
+## Supported Debug Probes
+
+| Probe | Backend | Notes |
+|-------|---------|-------|
+| J-Link | JLinkGDBServer | Full feature support, RTT, JLinkScript |
+| J-Link Plus | JLinkGDBServer | Full feature support, RTT, JLinkScript |
+| CMSIS-DAP | pyOCD | Open source, wide device support |
+| ST-Link | pyOCD | STM32 devices |
+| Flasher ARM | JLinkGDBServer | Production programming |
+
+## Supported Device Families
+
+Lager supports 70+ ARM Cortex-M device families with automatic architecture detection. The device type is specified as the channel when creating a debug net (e.g., `STM32F407VG`, `nRF52840`).
+
+### Cortex-M0/M0+ (ARMv6-M)
+
+| Family | Manufacturer |
+|--------|-------------|
+| RP2040 | Raspberry Pi |
+| nRF51 | Nordic Semiconductor |
+| STM32C0 | STMicroelectronics |
+| STM32F0 | STMicroelectronics |
+| STM32G0 | STMicroelectronics |
+| STM32L0 | STMicroelectronics |
+| LPC8xx, LPC11xx | NXP |
+| ATSAMD, ATSAML, ATSAMC | Microchip/Atmel |
+| EFM32 Zero Gecko | Silicon Labs |
+
+### Cortex-M3 (ARMv7-M)
+
+| Family | Manufacturer |
+|--------|-------------|
+| STM32F1 | STMicroelectronics |
+| STM32F2 | STMicroelectronics |
+| STM32L1 | STMicroelectronics |
+| LPC13xx, LPC17xx, LPC18xx | NXP |
+| LM3, LM4F (Stellaris/Tiva-C) | Texas Instruments |
+| EFM32 Giant/Leopard/Wonder Gecko | Silicon Labs |
+
+### Cortex-M4/M7 (ARMv7E-M)
+
+| Family | Manufacturer |
+|--------|-------------|
+| nRF52 | Nordic Semiconductor |
+| STM32F3 | STMicroelectronics |
+| STM32F4 | STMicroelectronics |
+| STM32F7 | STMicroelectronics |
+| STM32G4 | STMicroelectronics |
+| STM32H7 | STMicroelectronics |
+| STM32L4 | STMicroelectronics |
+| STM32WB | STMicroelectronics |
+| STM32WL | STMicroelectronics |
+| MKxxxx (Kinetis K) | NXP |
+| LPC4xxx, LPC54xxx | NXP |
+| MIMXRT (i.MX RT) | NXP |
+| TM4C | Texas Instruments |
+| MSP432 | Texas Instruments |
+| CC26xx, CC13xx | Texas Instruments |
+| ATSAM4, ATSAME, ATSAMS, ATSAMV | Microchip/Atmel |
+| EFM32, EFR32 | Silicon Labs |
+| CY, PSoC | Infineon |
+| DA145x, DA146x, DA148x | Dialog Semiconductor |
+
+### Cortex-M23 (ARMv8-M Base)
+
+| Family | Manufacturer |
+|--------|-------------|
+| LPC55S0x | NXP |
+
+### Cortex-M33/M55 (ARMv8-M Main)
+
+| Family | Manufacturer |
+|--------|-------------|
+| nRF53 | Nordic Semiconductor |
+| nRF91 | Nordic Semiconductor |
+| STM32L5 | STMicroelectronics |
+| STM32U5 | STMicroelectronics |
+| STM32H5 | STMicroelectronics |
+| STM32WBA | STMicroelectronics |
+| LPC55S | NXP |
+| R7FA (Renesas RA) | Renesas |
+
+<Note>
+Devices not in the table above default to Cortex-M4 (ARMv7E-M) architecture. If your device is not detected correctly, specify the full device part number (e.g., `STM32F407VG` rather than just `STM32F4`) when creating the debug net.
+</Note>
+
+## Notes
+
+- Debug nets are created with `lager nets create <name> debug <device_type> <address>`
+- The system auto-connects when needed for commands like `flash` and `reset`
+- Use `--erase` before flashing for clean RTT initialization
+- RTT streaming requires the device to have RTT support in firmware
+- Memory reads are more reliable with `--halt` to pause the CPU
+- Use `lager debug health --verbose` to diagnose connection issues
+- JLinkScript files are base64-encoded for storage and decoded automatically on the box
+
+## See Also
+
+- [Python Debug API](/source/reference/python/debug) -- Automate flashing and debugging in Python scripts
+- [Python Command](/source/reference/cli/python) -- Run test scripts on the box
+- [Glossary](/source/getting-started/glossary) -- Definitions of GDB, SWD, and other terms

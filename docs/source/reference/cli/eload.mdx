@@ -1,0 +1,172 @@
+---
+title: Electronic Load
+description: Control electronic load settings and modes
+---
+
+Control electronic load Nets through the Lager CLI. Electronic loads are used to simulate various load conditions for testing power supplies, batteries, and other power sources.
+
+## Syntax
+
+```bash
+lager eload [OPTIONS] NET_NAME COMMAND [ARGS]...
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box BOX` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| `cc` | Set or read constant current mode (A) |
+| `cv` | Set or read constant voltage mode (V) |
+| `cr` | Set or read constant resistance mode (Ω) |
+| `cp` | Set or read constant power mode (W) |
+| `state` | Display electronic load state |
+
+## Command Reference
+
+### `cc`
+
+Set or read constant current (CC) mode in amps.
+
+```bash
+lager eload NET_NAME cc [VALUE] [--box BOX]
+```
+
+**Arguments:**
+- `VALUE` - Current value in amps. If omitted, reads current setting.
+
+In CC mode, the electronic load maintains a constant current draw regardless of voltage changes.
+
+**Examples:**
+```bash
+# Set constant current to 2.5A
+lager eload LOAD1 cc 2.5
+
+# Read current CC setting
+lager eload LOAD1 cc
+```
+
+### `cv`
+
+Set or read constant voltage (CV) mode in volts.
+
+```bash
+lager eload NET_NAME cv [VALUE] [--box BOX]
+```
+
+**Arguments:**
+- `VALUE` - Voltage value in volts. If omitted, reads current setting.
+
+In CV mode, the electronic load adjusts current to maintain a constant voltage at its terminals.
+
+### `cr`
+
+Set or read constant resistance (CR) mode in ohms.
+
+```bash
+lager eload NET_NAME cr [VALUE] [--box BOX]
+```
+
+**Arguments:**
+- `VALUE` - Resistance value in ohms. If omitted, reads current setting.
+
+In CR mode, the electronic load behaves as a fixed resistance, with current varying according to Ohm's law (I = V/R).
+
+### `cp`
+
+Set or read constant power (CP) mode in watts.
+
+```bash
+lager eload NET_NAME cp [VALUE] [--box BOX]
+```
+
+**Arguments:**
+- `VALUE` - Power value in watts. If omitted, reads current setting.
+
+In CP mode, the electronic load adjusts voltage and current to maintain constant power dissipation.
+
+### `state`
+
+Display the current state of the electronic load.
+
+```bash
+lager eload NET_NAME state [--box BOX]
+```
+
+Returns information about the current operating mode, settings, and measurements.
+
+---
+
+## Examples
+
+```bash
+# Set constant current mode to 1.5A
+lager eload ELOAD1 cc 1.5 --box my-lager-box
+
+# Set constant voltage mode to 5V
+lager eload ELOAD1 cv 5.0
+
+# Set constant resistance mode to 10 ohms
+lager eload ELOAD1 cr 10.0
+
+# Set constant power mode to 50W
+lager eload ELOAD1 cp 50.0
+
+# Check current state
+lager eload ELOAD1 state
+```
+
+---
+
+## Operating Modes
+
+### Constant Current (CC)
+
+The load draws a fixed current regardless of voltage:
+- Use for testing power supply regulation
+- Ideal for battery discharge testing
+- Current remains stable as voltage varies
+
+### Constant Voltage (CV)
+
+The load maintains a fixed voltage at its terminals:
+- Simulates a voltage-clamping load
+- Useful for testing current-limited supplies
+- Current varies to maintain voltage
+
+### Constant Resistance (CR)
+
+The load behaves as a fixed resistor:
+- Current proportional to voltage (Ohm's law)
+- Simulates resistive loads
+- Natural response for many real-world loads
+
+### Constant Power (CP)
+
+The load maintains constant power dissipation:
+- P = V × I remains constant
+- Current increases as voltage drops
+- Simulates switching power supplies and similar loads
+
+---
+
+## Supported Hardware
+
+| Manufacturer | Model Series | Features |
+|--------------|--------------|----------|
+| Rigol | DL3000 | CC/CV/CR/CP modes, programmable |
+
+---
+
+## Notes
+
+- Net names refer to names assigned when setting up your testbed
+- Use `lager nets` to see available e-load nets
+- Electronic loads can dissipate significant power; ensure adequate cooling
+- Always verify load ratings before applying high power levels

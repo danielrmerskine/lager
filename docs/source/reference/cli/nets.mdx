@@ -1,0 +1,479 @@
+---
+title: Nets
+description: Create and manage nets (test points) on your Lager Box
+---
+
+Nets are the core abstraction in Lager for representing physical test points, signals, or buses on your device under test. Each net maps a friendly name to a specific instrument channel.
+
+## Syntax
+
+```bash
+lager nets [OPTIONS] [COMMAND]
+```
+
+## Global Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+## Commands
+
+| Command | Description |
+|---------|-------------|
+| (none) | List all saved nets (default) |
+| `delete` | Delete a specific net by name and type |
+| `delete-all` | Delete all saved nets (dangerous) |
+| `rename` | Rename an existing net |
+| `create` | Create a new net |
+| `create-all` | Auto-create all available nets from connected instruments |
+| `create-batch` | Create multiple nets from a JSON file |
+| `tui` | Launch interactive Net Manager TUI |
+| `set-script` | Attach a J-Link script to a debug net |
+| `remove-script` | Remove a J-Link script from a debug net |
+| `show-script` | Display the J-Link script attached to a debug net |
+
+## Command Reference
+
+### List Nets (Default)
+
+List all saved nets on a Lager Box. This is the default behavior when no subcommand is provided.
+
+```bash
+lager nets --box my-lager-box
+```
+
+**Output Columns:**
+
+| Column | Description |
+|--------|-------------|
+| `Name` | User-friendly net identifier |
+| `Net Type` | Role/type of net (supply, debug, adc, gpio, i2c, spi, etc.) |
+| `Instrument` | Physical equipment (Rigol_DP811, Keithley_2281S, etc.) |
+| `Channel` | Specific channel on the instrument |
+| `Address` | VISA or USB address of the instrument |
+| `Script` | Whether a J-Link script is attached (debug nets only) |
+
+The `Script` column only appears if any debug net has a J-Link script attached.
+
+**Example Output:**
+
+```
+Name        Net Type    Instrument        Channel  Address
+================================================================================
+supply1     supply      Rigol_DP811       1        TCPIP::192.168.1.100::INSTR
+battery1    batt        Keithley_2281S    1        TCPIP::192.168.1.101::INSTR
+debug1      debug       J-Link            STM32F4  USB::001::002
+adc1        adc         LabJack_T7        AIN0     USB::470026574
+gpio1       gpio        LabJack_T7        FIO0     USB::470026574
+i2c1        i2c         LabJack_T7        0        USB::470026574
+spi1        spi         Aardvark          0        USB::2238595116
+uart1       uart        Prolific_USB      0        /dev/ttyUSB0
+```
+
+### `create`
+
+Create a new net by specifying its name, type, channel, and instrument address.
+
+```bash
+lager nets create NAME ROLE CHANNEL ADDRESS [OPTIONS]
+```
+
+**Arguments:**
+- `NAME` - Unique name for the net (e.g., `supply1`, `debug_main`)
+- `ROLE` - Type of net: `supply`, `batt`, `solar`, `debug`, `adc`, `dac`, `gpio`, `scope`, `eload`, `uart`, `usb`, `camera`, `arm`, `watt-meter`, `thermocouple`, `i2c`, `spi`
+- `CHANNEL` - Channel identifier (e.g., `1`, `AIN0`, `FIO0`, `STM32F4`, `0`)
+- `ADDRESS` - VISA address or device path (e.g., `TCPIP::192.168.1.100::INSTR`)
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--jlink-script FILE` - J-Link script file for debug nets (stored on box)
+
+**Examples:**
+
+```bash
+# Create a power supply net
+lager nets create supply1 supply 1 TCPIP::192.168.1.100::INSTR --box my-lager-box
+
+# Create a debug net for STM32
+lager nets create debug1 debug STM32F407VG USB::001::002 --box my-lager-box
+
+# Create a debug net with J-Link script
+lager nets create debug1 debug STM32F407VG USB::001::002 --jlink-script ./my_device.JLinkScript --box my-lager-box
+
+# Create an ADC net on LabJack
+lager nets create temp_sensor adc AIN0 USB::470026574 --box my-lager-box
+
+# Create an I2C net on LabJack
+lager nets create i2c_bus i2c 0 USB::470026574 --box my-lager-box
+
+# Create an I2C net on Aardvark
+lager nets create i2c_aardvark i2c 0 USB::2238595116 --box my-lager-box
+
+# Create an SPI net on LabJack
+lager nets create spi_bus spi 0 USB::470026574 --box my-lager-box
+
+# Create an SPI net on Aardvark
+lager nets create spi_aardvark spi 0 USB::2238595116 --box my-lager-box
+
+# Create a UART net
+lager nets create serial1 uart 0 /dev/ttyUSB0 --box my-lager-box
+```
+
+<Note>
+The `--jlink-script` option is only applicable for debug nets. If used with other net types, a warning is printed and the option is ignored.
+</Note>
+
+**Validation Rules:**
+- Net names must be globally unique across all types
+- The (role, instrument, channel, address) tuple must match a connected instrument
+- Only one net per channel is allowed for most instruments
+- Debug probes (J-Link) allow only one net per instrument/address
+
+### `create-all`
+
+Automatically create nets for all available channels on all connected instruments. This is useful for quickly setting up a new Lager Box.
+
+```bash
+lager nets create-all [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--yes` - Skip confirmation prompt
+
+**Example:**
+
+```bash
+# Preview what nets would be created
+lager nets create-all --box my-lager-box
+
+# Create all nets without prompting
+lager nets create-all --box my-lager-box --yes
+```
+
+**Output:**
+
+```
+Found 8 nets that can be created:
+  - supply1 (supply) on Rigol_DP811 channel 1
+  - adc1 (adc) on LabJack_T7 channel AIN0
+  - adc2 (adc) on LabJack_T7 channel AIN1
+  - gpio1 (gpio) on LabJack_T7 channel FIO0
+  - i2c1 (i2c) on LabJack_T7 channel 0
+  - spi1 (spi) on LabJack_T7 channel 0
+  - debug1 (debug) on J-Link channel STM32F4
+
+Create all 8 nets on box <BOX_IP>? [y/N]:
+```
+
+### `create-batch`
+
+Create multiple nets from a JSON file for efficient bulk setup.
+
+```bash
+lager nets create-batch JSON_FILE [OPTIONS]
+```
+
+**Arguments:**
+- `JSON_FILE` - Path to JSON file containing net definitions
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**JSON Format:**
+
+```json
+[
+  {
+    "name": "supply1",
+    "role": "supply",
+    "channel": "1",
+    "address": "TCPIP::192.168.1.100::INSTR"
+  },
+  {
+    "name": "i2c_bus",
+    "role": "i2c",
+    "channel": "0",
+    "address": "USB::470026574"
+  },
+  {
+    "name": "spi_bus",
+    "role": "spi",
+    "channel": "0",
+    "address": "USB::2238595116"
+  }
+]
+```
+
+**Example:**
+
+```bash
+lager nets create-batch nets.json --box my-lager-box
+```
+
+### `delete`
+
+Delete a specific net by its name and type.
+
+```bash
+lager nets delete NAME NET_TYPE [OPTIONS]
+```
+
+**Arguments:**
+- `NAME` - Name of the net to delete
+- `NET_TYPE` - Type of the net (supply, debug, adc, i2c, spi, etc.)
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--yes` - Skip confirmation prompt
+
+**Example:**
+
+```bash
+# Delete a supply net (with confirmation)
+lager nets delete supply1 supply --box my-lager-box
+
+# Delete without confirmation
+lager nets delete temp_sensor adc --box my-lager-box --yes
+
+# Delete an I2C net
+lager nets delete i2c_bus i2c --box my-lager-box --yes
+```
+
+### `delete-all`
+
+Delete all saved nets on a Lager Box. **This is a dangerous operation.**
+
+```bash
+lager nets delete-all [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+- `--yes` - Skip confirmation prompt
+
+**Example:**
+
+```bash
+# Delete all nets (requires confirmation)
+lager nets delete-all --box my-lager-box
+
+# Delete all nets without prompting
+lager nets delete-all --box my-lager-box --yes
+```
+
+### `rename`
+
+Rename an existing net.
+
+```bash
+lager nets rename NAME NEW_NAME [OPTIONS]
+```
+
+**Arguments:**
+- `NAME` - Current name of the net
+- `NEW_NAME` - New name for the net (must be unique)
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+
+```bash
+lager nets rename supply1 main_power --box my-lager-box
+```
+
+### `tui`
+
+Launch an interactive terminal-based UI for managing nets. The TUI provides a visual interface for viewing, creating, and deleting nets.
+
+```bash
+lager nets tui [OPTIONS]
+```
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+
+```bash
+lager nets tui --box my-lager-box
+```
+
+**TUI Features:**
+- Browse all connected instruments and their channels
+- Create new nets with guided prompts
+- Delete existing nets
+- View net details and instrument information
+- Keyboard navigation
+
+### `set-script`
+
+Attach a JLinkScript file to an existing debug net. The script is stored on the box and used automatically during connect, flash, erase, and reset operations.
+
+```bash
+lager nets set-script NAME SCRIPT_PATH [OPTIONS]
+```
+
+**Arguments:**
+- `NAME` - Name of the debug net
+- `SCRIPT_PATH` - Path to the J-Link script file (must exist locally)
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+
+```bash
+# Attach a J-Link script to a debug net
+lager nets set-script debug1 ./custom_connect.JLinkScript --box my-lager-box
+
+# Update an existing script
+lager nets set-script debug1 ./updated_script.JLinkScript --box my-lager-box
+```
+
+### `remove-script`
+
+Remove a JLinkScript file from an existing debug net.
+
+```bash
+lager nets remove-script NAME [OPTIONS]
+```
+
+**Arguments:**
+- `NAME` - Name of the debug net
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+
+```bash
+lager nets remove-script debug1 --box my-lager-box
+```
+
+### `show-script`
+
+Display the contents of a JLinkScript attached to a debug net. Output goes to stdout so it can be piped or redirected.
+
+```bash
+lager nets show-script NAME [OPTIONS]
+```
+
+**Arguments:**
+- `NAME` - Name of the debug net
+
+**Options:**
+- `--box TEXT` - Lagerbox name or IP
+
+**Example:**
+
+```bash
+# Display script contents
+lager nets show-script debug1 --box my-lager-box
+
+# Save script to a local file
+lager nets show-script debug1 --box my-lager-box > script.JLinkScript
+```
+
+## Net Types Reference
+
+| Net Type | Description | Typical Instruments |
+|----------|-------------|---------------------|
+| `supply` | Power supply output | Rigol DP800, Keithley 2200/2280, Keysight E36200 |
+| `batt` | Battery simulator | Keithley 2281S |
+| `solar` | Solar simulator | EA PSI/EL series |
+| `eload` | Electronic load | Rigol DL3021 |
+| `debug` | Debug probe | J-Link, CMSIS-DAP, ST-Link |
+| `adc` | Analog input | LabJack T7 |
+| `dac` | Analog output | LabJack T7 |
+| `gpio` | Digital I/O | LabJack T7, MCC USB-202 |
+| `i2c` | I2C bus | LabJack T7, Aardvark |
+| `spi` | SPI bus | LabJack T7, Aardvark |
+| `scope` | Oscilloscope | Rigol MSO5000, PicoScope |
+| `uart` | Serial port | Prolific USB, SiLabs CP210x |
+| `usb` | USB port control | Acroname hub, YKUSH |
+| `camera` | Video capture | Logitech BRIO |
+| `arm` | Robot arm | Rotrics Dexarm |
+| `watt-meter` | Power measurement | Yocto Watt |
+| `thermocouple` | Temperature sensor | Phidget thermocouples |
+
+## JLinkScript Workflow
+
+JLinkScript files allow customization of J-Link debug probe behavior for specific hardware configurations. Scripts can handle custom reset sequences, clock initialization, and other device-specific operations.
+
+```bash
+# Create a debug net with a J-Link script
+lager nets create debug1 debug STM32F407VG USB::001::002 \
+  --jlink-script ./my_device.JLinkScript --box my-lager-box
+
+# Or attach a script to an existing debug net
+lager nets set-script debug1 ./my_device.JLinkScript --box my-lager-box
+
+# Verify the script is attached
+lager nets show-script debug1 --box my-lager-box
+
+# The script is used automatically for all debug operations:
+lager debug debug1 flash --hex firmware.hex --box my-lager-box
+lager debug debug1 gdbserver --box my-lager-box
+
+# Remove the script when no longer needed
+lager nets remove-script debug1 --box my-lager-box
+```
+
+You can also configure J-Link scripts per-project in the local `.lager` config file:
+
+```json
+{
+  "DEBUG": {
+    "debug1": "./scripts/my_device.JLinkScript"
+  }
+}
+```
+
+When both a net-level script (via `set-script`) and a project-level script (via `.lager` config) exist, the project-level script takes priority.
+
+## Examples
+
+```bash
+# List all nets
+lager nets --box my-lager-box
+
+# Create a new power supply net
+lager nets create vdd_main supply 1 TCPIP::192.168.1.100::INSTR --box my-lager-box
+
+# Create I2C and SPI bus nets
+lager nets create i2c_sensors i2c 0 USB::470026574 --box my-lager-box
+lager nets create spi_flash spi 0 USB::2238595116 --box my-lager-box
+
+# Auto-create all available nets
+lager nets create-all --box my-lager-box --yes
+
+# Delete a specific net
+lager nets delete old_supply supply --box my-lager-box --yes
+
+# Rename a net
+lager nets rename supply1 main_power --box my-lager-box
+
+# Launch interactive manager
+lager nets tui --box my-lager-box
+
+# Bulk create from JSON file
+lager nets create-batch testbed-nets.json --box my-lager-box
+
+# Manage J-Link scripts
+lager nets set-script debug1 ./custom_init.JLinkScript --box my-lager-box
+lager nets show-script debug1 --box my-lager-box
+lager nets remove-script debug1 --box my-lager-box
+```
+
+## Notes
+
+- Net names are globally unique regardless of type
+- Use `lager instruments --box <lager-box>` to see available instruments and channels
+- The TUI provides the easiest way to set up nets for the first time
+- Use `create-all` to quickly configure a new Lager Box with sensible defaults
+- I2C and SPI nets are supported on LabJack T7 and Aardvark adapters
+- J-Link scripts are base64-encoded for storage and decoded automatically during debug operations

@@ -1,0 +1,81 @@
+---
+title: Hello
+description: Validate CLI installation and Lager Box connection
+---
+
+Quick command to validate your CLI installation, Lager Box connection, and display the box version.
+
+## Syntax
+
+```bash
+lager hello [OPTIONS]
+```
+
+## Options
+
+| Option | Description |
+|--------|-------------|
+| `--box TEXT` | Lagerbox name or IP address |
+| `--help` | Show help message and exit |
+
+---
+
+## Usage
+
+```bash
+# Basic hello command
+lager hello
+
+# Hello with specific Lager Box
+lager hello --box my-lager-box
+
+# Hello with Lager Box IP
+lager hello --box <BOX_IP>
+```
+
+---
+
+## Output
+
+The hello command displays a success message along with the Lager Box version:
+
+```bash
+$ lager hello --box my-lager-box
+Hello from my-lager-box!
+Version: 0.3.22
+```
+
+If the box version cannot be determined (older box software that does not support version reporting), the version is shown as unknown:
+
+```
+$ lager hello --box old-box
+Hello from old-box!
+Version: Unknown
+```
+
+---
+
+## Examples
+
+```bash
+# Verify connectivity after initial setup
+lager hello --box my-lager-box
+
+# Quick check that default box is reachable
+lager defaults add --box my-lager-box
+lager hello
+
+# Check version of a specific box
+lager hello --box lab-gw
+```
+
+---
+
+## Notes
+
+- Simple validation command to test CLI installation
+- Verifies connectivity to the Lager Box
+- Displays the Lager Box software version by querying the `/cli-version` endpoint
+- Useful for troubleshooting connection issues
+- No arguments required when a default box is set
+- Returns success message when connection is working

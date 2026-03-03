@@ -1,0 +1,47 @@
+---
+title: "Version 0.2.20"
+description: "November 26, 2025"
+---
+
+## <u>Features</u>
+
+### Python Script Enhancements
+- Nets now working inside `lager python` scripts
+- Enhanced Python script execution environment
+- Added support for UART in Python scripts
+
+### Oscilloscope Web UI
+- Added HTTP server for oscilloscope web UI on port 8080
+- Added oscilloscope-streamer with WebSocket support
+- Exposed oscilloscope visualization interface
+
+## <u>Bug Fixes</u>
+
+- Fixed `python --add-file` command functionality
+- Fixed `lager update` udev rules path
+- Fixed LabJack device open timeout causing indefinite hangs
+
+## <u>Improvements</u>
+
+- Improved Lager Box deployment scripts
+- Enhanced `lager update` to include all necessary files in sparse checkout
+- Moved oscilloscope-streamer to gateway/oscilloscope-daemon/
+- Code cleanup and organization improvements
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.2.20
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.2.20/)

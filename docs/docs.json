@@ -1,0 +1,271 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "styles": ["./styles.css"],
+  "theme": "mint",
+  "name": "Lager",
+  "colors": {
+    "primary": "#ff5ca2",
+    "light": "#ffa8cb",
+    "dark": "#cc4c82"
+  },
+  "favicon": "/lager-favicon.svg",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Overview",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "source/getting-started/overview",
+              "source/getting-started/adding-first-lager-box",
+              "source/getting-started/setting-up-instruments",
+              "source/getting-started/interacting-with-nets",
+              "source/getting-started/first-test"
+            ]
+          },
+          {
+            "group": "Resources",
+            "pages": [
+              "source/getting-started/troubleshooting",
+              "source/getting-started/glossary",
+              "source/getting-started/architecture"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "CLI Reference",
+        "groups": [
+          {
+            "group": "Lager Box Management",
+            "pages": [
+              "source/reference/cli/overview",
+              "source/reference/cli/terminal",
+              "source/reference/cli/hello",
+              "source/reference/cli/boxes",
+              "source/reference/cli/install",
+              "source/reference/cli/uninstall",
+              "source/reference/cli/update",
+              "source/reference/cli/ssh",
+              "source/reference/cli/logs",
+              "source/reference/cli/pip"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "source/reference/cli/lager-file",
+              "source/reference/cli/instruments",
+              "source/reference/cli/nets",
+              "source/reference/cli/defaults"
+            ]
+          },
+          {
+            "group": "Power & Simulation",
+            "pages": [
+              "source/reference/cli/supply",
+              "source/reference/cli/battery",
+              "source/reference/cli/solar",
+              "source/reference/cli/eload",
+              "source/reference/cli/watt",
+              "source/reference/cli/energy"
+            ]
+          },
+          {
+            "group": "Measurement",
+            "pages": [
+              "source/reference/cli/scope",
+              "source/reference/cli/logic",
+              "source/reference/cli/adc",
+              "source/reference/cli/tc"
+            ]
+          },
+          {
+            "group": "I/O & Communication",
+            "pages": [
+              "source/reference/cli/gpi",
+              "source/reference/cli/gpo",
+              "source/reference/cli/dac",
+              "source/reference/cli/uart",
+              "source/reference/cli/i2c",
+              "source/reference/cli/spi",
+              "source/reference/cli/usb",
+              "source/reference/cli/ble",
+              "source/reference/cli/wifi"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "source/reference/cli/debug",
+              "source/reference/cli/python",
+              "source/reference/cli/exec",
+              "source/reference/cli/binaries",
+              "source/reference/cli/docker-helper"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "source/reference/cli/webcam",
+              "source/reference/cli/arm",
+              "source/reference/cli/web-apps",
+              "source/reference/cli/factory"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Python API",
+        "groups": [
+          {
+            "group": "Getting Started",
+            "pages": [
+              "source/reference/python/overview",
+              "source/reference/python/binaries",
+              "source/reference/python/net"
+            ]
+          },
+          {
+            "group": "Development",
+            "pages": [
+              "source/reference/python/debug"
+            ]
+          },
+          {
+            "group": "Power & Simulation",
+            "pages": [
+              "source/reference/python/supply",
+              "source/reference/python/battery",
+              "source/reference/python/solar",
+              "source/reference/python/eload",
+              "source/reference/python/watt",
+              "source/reference/python/energy"
+            ]
+          },
+          {
+            "group": "Measurement",
+            "pages": [
+              "source/reference/python/scope",
+              "source/reference/python/logic",
+              "source/reference/python/adc",
+              "source/reference/python/tc"
+            ]
+          },
+          {
+            "group": "I/O & Communication",
+            "pages": [
+              "source/reference/python/gpio",
+              "source/reference/python/dac",
+              "source/reference/python/i2c",
+              "source/reference/python/spi",
+              "source/reference/python/usb",
+              "source/reference/python/uart",
+              "source/reference/python/serial",
+              "source/reference/python/ble",
+              "source/reference/python/wifi"
+            ]
+          },
+          {
+            "group": "Utilities",
+            "pages": [
+              "source/reference/python/arm",
+              "source/reference/python/webcam"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Supported Instruments",
+        "groups": [
+          {
+            "group": "Supported Instruments",
+            "pages": [
+              "source/supported-instruments/supported-instruments"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Release Notes",
+        "groups": [
+          {
+            "group": "Version History",
+            "pages": [
+              "source/release-notes/v0.3.28",
+              "source/release-notes/v0.3.27",
+              "source/release-notes/v0.3.26",
+              "source/release-notes/v0.3.25",
+              "source/release-notes/v0.3.24",
+              "source/release-notes/v0.3.23",
+              "source/release-notes/v0.3.22",
+              "source/release-notes/v0.3.21",
+              "source/release-notes/v0.3.20",
+              "source/release-notes/v0.3.19",
+              "source/release-notes/v0.3.18",
+              "source/release-notes/v0.3.17",
+              "source/release-notes/v0.3.16",
+              "source/release-notes/v0.3.15",
+              "source/release-notes/v0.3.14",
+              "source/release-notes/v0.3.13",
+              "source/release-notes/v0.3.12",
+              "source/release-notes/v0.3.11",
+              "source/release-notes/v0.3.10",
+              "source/release-notes/v0.3.9",
+              "source/release-notes/v0.3.8",
+              "source/release-notes/v0.3.7",
+              "source/release-notes/v0.3.6",
+              "source/release-notes/v0.3.5",
+              "source/release-notes/v0.3.4",
+              "source/release-notes/v0.3.3",
+              "source/release-notes/v0.3.2",
+              "source/release-notes/v0.3.1",
+              "source/release-notes/v0.2.36",
+              "source/release-notes/v0.2.35",
+              "source/release-notes/v0.2.33",
+              "source/release-notes/v0.2.32",
+              "source/release-notes/v0.2.31",
+              "source/release-notes/v0.2.30",
+              "source/release-notes/v0.2.29",
+              "source/release-notes/v0.2.28",
+              "source/release-notes/v0.2.27",
+              "source/release-notes/v0.2.26",
+              "source/release-notes/v0.2.25",
+              "source/release-notes/v0.2.24",
+              "source/release-notes/v0.2.23",
+              "source/release-notes/v0.2.22",
+              "source/release-notes/v0.2.21",
+              "source/release-notes/v0.2.20",
+              "source/release-notes/v0.2.19",
+              "source/release-notes/v0.2.18",
+              "source/release-notes/v0.2.17"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "logo": {
+    "light": "/logo/light.png",
+    "dark": "/logo/dark.png"
+  },
+  "navbar": {
+    "links": [
+      {
+        "label": "Support",
+        "href": "https://github.com/lagerdata/lager/issues"
+      }
+    ],
+    "primary": {
+      "type": "button",
+      "label": "Documentation",
+      "href": "https://github.com/lagerdata/lager"
+    }
+  },
+  "footer": {
+    "socials": {
+      "github": "https://github.com/lagerdata"
+    }
+  }
+}

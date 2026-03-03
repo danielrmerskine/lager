@@ -1,0 +1,35 @@
+---
+title: "Version 0.3.9"
+description: "January 15, 2026"
+---
+
+## <u>Bug Fixes</u>
+
+### Supply TUI Import Error
+- Fixed an import error that prevented the Supply TUI from starting after the dispatcher refactoring
+- Added backward compatibility wrappers for `_resolve_net_and_driver` in supply and battery dispatchers
+- The TUI now starts correctly and connects to power supplies without errors
+
+## <u>Improvements</u>
+
+### Supply TUI Display Cleanup
+- Removed debug logging that was appearing in production output
+- Fixed cosmetic display issue where negative zero values (-0.000) appeared instead of 00.000 for current and power measurements
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.9
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.9/)

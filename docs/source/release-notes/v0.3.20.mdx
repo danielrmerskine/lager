@@ -1,0 +1,48 @@
+---
+title: "Version 0.3.20"
+description: "February 13, 2026"
+---
+
+## <u>Features</u>
+
+### Aardvark GPIO Support
+- Added GPIO driver for the Aardvark USB adapter, enabling digital I/O control via `lager gpi` and `lager gpo` commands
+- Supports reading and writing individual GPIO pins on the Aardvark adapter
+
+### SPI Chip Select Control
+- SPI commands now support manual vs automatic chip select (CS) assertion for both Aardvark and LabJack adapters
+- Allows fine-grained control over CS pin behavior during multi-byte SPI transactions
+
+### GPI Command Enhancements
+- Added GPIO direction configuration support to `lager gpi` commands
+- GPIO dispatcher now supports Aardvark and LabJack backends with direction control
+
+## <u>Bug Fixes</u>
+
+- Fixed SPI protocol files to use separate TX and RX data handling across all backends
+- Fixed LabJack SPI driver transaction handling
+
+## <u>Improvements</u>
+
+- Improved natural sorting for CLI list outputs (nets, boxes, instruments, defaults, logs, and status views)
+- Updated SPI base class and net abstractions for better multi-backend consistency
+- Temporarily disabled FT232H backend code pending further testing
+- Added comprehensive test scripts for Aardvark and LabJack I2C, SPI, and GPIO
+
+## <u>Installation</u>
+
+To install this version:
+
+```bash
+pip install lager-cli==0.3.20
+```
+
+To upgrade from a previous version:
+
+```bash
+pip install --upgrade lager-cli
+```
+
+## Resources
+
+[View Release on PyPI](https://pypi.org/project/lager-cli/0.3.20/)
