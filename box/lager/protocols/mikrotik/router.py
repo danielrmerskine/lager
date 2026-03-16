@@ -51,37 +51,58 @@ class MikroTikRouter:
     # HTTP helpers
     # ──────────────────────────────────────────────
 
-    def _get(self, path, params=None):
+    def _new_session(self):
+        session = requests.Session()
+        session.auth = self._auth
+        session.headers.update({'content-type': 'application/json'})
+        if self._use_ssl:
+            session.verify = False
+        return session
+
+    def _request(self, method, path, **kwargs):
+        """Execute an HTTP request against the RouterOS REST API.
+
+        Retries up to 3 times with increasing backoff on connection errors.
+        RouterOS closes idle TCP connections after ~20-30s; when that happens
+        urllib3 raises ConnectionError on the next reuse attempt. Recreating
+        the session establishes a fresh TCP connection and recovers cleanly.
+        """
         url = f'{self._base_url}/{path.lstrip("/")}'
-        resp = self._session.get(url, params=params, timeout=10)
-        resp.raise_for_status()
-        return resp.json()
+        kwargs.setdefault('timeout', 10)
+        last_exc = None
+        for attempt, delay in enumerate([0, 3, 6]):
+            try:
+                if delay:
+                    self._session.close()
+                    self._session = self._new_session()
+                    time.sleep(delay)
+                resp = getattr(self._session, method)(url, **kwargs)
+                resp.raise_for_status()
+                return resp
+            except requests.exceptions.ConnectionError as e:
+                last_exc = e
+        raise last_exc
+
+    def _get(self, path, params=None):
+        return self._request('get', path, params=params).json()
 
     def _put(self, path, data=None):
         """Create a new entry (RouterOS: PUT = add)."""
-        url = f'{self._base_url}/{path.lstrip("/")}'
-        resp = self._session.put(url, json=data or {}, timeout=10)
-        resp.raise_for_status()
+        resp = self._request('put', path, json=data or {})
         return resp.json() if resp.content else {}
 
     def _patch(self, path, data=None):
         """Update an existing entry by ID (RouterOS: PATCH = set)."""
-        url = f'{self._base_url}/{path.lstrip("/")}'
-        resp = self._session.patch(url, json=data or {}, timeout=10)
-        resp.raise_for_status()
+        resp = self._request('patch', path, json=data or {})
         return resp.json() if resp.content else {}
 
     def _delete(self, path):
         """Delete an entry by ID."""
-        url = f'{self._base_url}/{path.lstrip("/")}'
-        resp = self._session.delete(url, timeout=10)
-        resp.raise_for_status()
+        self._request('delete', path)
 
     def _post(self, path, data=None):
         """Execute a command (RouterOS: POST = action)."""
-        url = f'{self._base_url}/{path.lstrip("/")}'
-        resp = self._session.post(url, json=data or {}, timeout=10)
-        resp.raise_for_status()
+        resp = self._request('post', path, json=data or {})
         return resp.json() if resp.content else {}
 
     def _find_wireless_id(self, interface):
