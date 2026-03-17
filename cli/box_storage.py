@@ -22,24 +22,62 @@ def get_lager_file_path() -> Path:
     return Path.home() / '.lager'
 
 
-def load_boxes() -> Dict[str, any]:
-    """Load boxes from the .lager file.
+def _load_boxes_from_file(path) -> Dict[str, any]:
+    """Load boxes from a single .lager file path.
+
+    Args:
+        path: Path (str or Path) to a .lager file
 
     Returns a dict where values can be either:
     - str: IP address (legacy format)
     - dict: {"ip": str, "user": str} (new format)
     """
-    lager_file = get_lager_file_path()
-    if not lager_file.exists():
+    path = Path(path) if not isinstance(path, Path) else path
+    if not path.exists():
         return {}
 
     try:
-        with open(lager_file, 'r', encoding='utf-8') as f:
+        with open(path, 'r', encoding='utf-8') as f:
             data = json.load(f)
-            # Check for new BOXES key, fallback to DUTS (backward compat), then legacy 'duts'
             return data.get('BOXES') or data.get('DUTS') or data.get('duts', {})
     except (json.JSONDecodeError, FileNotFoundError):
         return {}
+
+
+def _load_global_boxes() -> Dict[str, any]:
+    """Load boxes from only the global ~/.lager file.
+
+    Used by write operations to avoid leaking project boxes into global storage.
+    """
+    return _load_boxes_from_file(get_lager_file_path())
+
+
+def load_boxes() -> Dict[str, any]:
+    """Load boxes from global and project-level .lager files.
+
+    Merges boxes from all discovered .lager files. Project-level boxes
+    (closest to cwd) take precedence over global boxes.
+
+    Returns a dict where values can be either:
+    - str: IP address (legacy format)
+    - dict: {"ip": str, "user": str} (new format)
+    """
+    from .config import _find_config_files
+
+    # Start with global boxes
+    merged = _load_global_boxes()
+
+    # Overlay project-level boxes (closest file wins, so apply farthest first)
+    try:
+        project_configs = _find_config_files()
+    except (FileNotFoundError, OSError):
+        # cwd may have been deleted (e.g., rm -rf while still cd'd into it)
+        project_configs = []
+    for config_path in reversed(project_configs):
+        project_boxes = _load_boxes_from_file(config_path)
+        merged.update(project_boxes)
+
+    return merged
 
 
 def save_boxes(boxes: Dict[str, str]) -> None:
@@ -95,7 +133,7 @@ def add_box(name: str, ip: str, user: Optional[str] = None, version: Optional[st
         user: Optional username (if None and version is None, stores in legacy format)
         version: Optional version/branch name (e.g., "staging", "main")
     """
-    boxes = load_boxes()
+    boxes = _load_global_boxes()
     if user or version:
         # New format with user and/or version
         box_dict = {"ip": ip}
@@ -160,14 +198,16 @@ def get_box_version(name: str) -> Optional[str]:
 def update_box_version(name: str, version: str) -> bool:
     """Update the version for a named box.
 
+    Only updates boxes in the global ~/.lager file.
+
     Args:
         name: Box name
         version: Version/branch name (e.g., "staging", "main")
 
     Returns:
-        True if updated, False if box not found
+        True if updated, False if box not found in global config
     """
-    boxes = load_boxes()
+    boxes = _load_global_boxes()
     if name not in boxes:
         return False
 
@@ -206,8 +246,8 @@ def get_box_name_by_ip(ip: str) -> Optional[str]:
 
 
 def delete_box(name: str) -> bool:
-    """Delete a box from the local storage. Returns True if deleted, False if not found."""
-    boxes = load_boxes()
+    """Delete a box from the global storage. Returns True if deleted, False if not found."""
+    boxes = _load_global_boxes()
     if name in boxes:
         del boxes[name]
         save_boxes(boxes)
@@ -221,8 +261,8 @@ def list_boxes() -> Dict[str, str]:
 
 
 def delete_all_boxes() -> int:
-    """Delete all boxes from the local storage. Returns the number of boxes deleted."""
-    boxes = load_boxes()
+    """Delete all boxes from the global storage. Returns the number of boxes deleted."""
+    boxes = _load_global_boxes()
     count = len(boxes)
     save_boxes({})
     return count

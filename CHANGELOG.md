@@ -18,6 +18,39 @@ All notable changes to the Lager platform are documented here. For detailed rele
 - `lager router reset` to restore a router to a clean baseline state (removes test firewall rules, bandwidth limits, and access list entries)
 - `lager router run` for arbitrary REST API calls against the router
 
+## [0.9.0] - 2026-03-16
+
+### Added
+- `disconnect_wifi()` standalone function for the Python WiFi API
+- `lager boxes` now reads project-level `.lager` files, not just the global `~/.lager`
+- WiFi Python API docs updated to use standalone functions
+
+### Fixed
+- `lager boxes` showing empty results in fresh Docker containers when boxes were defined in a project-level `.lager` file
+- Typo in `wifi/status.py`
+
+## [0.8.0] - 2026-03-12
+
+### Added
+- RTT RAM search parameters for Python API: `dbg.rtt(search_addr=, search_size=, chunk_size=)`
+- RTT RAM search CLI flags: `--rtt-search-addr`, `--rtt-search-size`, `--rtt-chunk-size`
+- Instruments and nets HTTP handlers on Lager Box
+
+### Fixed
+- PID file path mismatch: `status()` and `rtt()` now check both `/tmp/jlink.pid` and `/tmp/jlink_gdbserver.pid`
+- `detect_and_configure_rtt()` now detects running debugger correctly (was always reporting "No debugger connection")
+- `erase_flash()` and `read_memory()` now check both PID file paths
+
+## [0.7.0] - 2026-03-10
+
+### Added
+- `lager devenv terminal --attach <container_name>` to attach to a running Docker container
+- `lager devenv terminal --shell <path>` to override the shell when attaching
+- Jobs WebSocket client in control plane heartbeat for receiving and executing job dispatch commands
+
+### Changed
+- Default control plane URL changed to `https://api.stoutdata.ai`
+
 ## [0.6.0] - 2026-03-06
 
 ### Added
