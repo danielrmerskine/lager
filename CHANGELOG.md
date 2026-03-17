@@ -2,6 +2,44 @@
 
 All notable changes to the Lager platform are documented here. For detailed release notes, see [docs.lagerdata.com](https://docs.lagerdata.com).
 
+## [0.10.0] - 2026-03-17
+
+### Added
+- `lager router` command group for managing routers as Lager nets
+- `lager router add-net` to register a router (MikroTik hAP or compatible) as a net on a Lager Box
+- `lager router connect` to verify connectivity to a router net
+- `lager router interfaces` and `lager router wireless-interfaces` to inspect network interfaces
+- `lager router wireless-clients` to list connected wireless clients
+- `lager router dhcp-leases` to list devices that have received IP addresses
+- `lager router system-info` to query router resource usage
+- `lager router reboot` to reboot a router net
+- `lager router enable-interface` / `lager router disable-interface` for wireless interface control
+- `lager router block-internet` to drop all forwarded traffic for network isolation testing
+- `lager router reset` to restore a router to a clean baseline state (removes test firewall rules, bandwidth limits, and access list entries)
+- `lager router run` for arbitrary REST API calls against the router
+
+## [0.6.0] - 2026-03-06
+
+### Added
+- `lager python --reattach <ID>` to stream output from detached processes (replays from start)
+- `lager python --kill <ID>` to kill a specific detached process
+- `lager python --kill-all` to kill all running `lager python` processes on a box
+- Ctrl+D during `--reattach` detaches without killing the process
+- 10 MB log cap for detached process output to prevent disk abuse
+- Runtime warning when system-installed `lager` CLI shadows a virtual environment version
+
+### Fixed
+- Ctrl+C during `lager python` no longer breaks the Acroname USB hub (required box reboot before)
+- `--detach` no longer hangs; returns immediately with process ID and reattach/kill hints
+- `--kill` now actually kills the process (was silently doing nothing)
+- `--kill <invalid-id>` shows a friendly error instead of a traceback
+- Multi-user box provisioning: new users are always added to the docker group
+- `start_box.sh` uses `$HOME` instead of hardcoded `/home/lagerdata` paths
+
+### Changed
+- `--kill` changed from a boolean flag to an option that takes a process ID
+- Detached process output now shows box name instead of IP address
+
 ## [0.5.0] - 2026-03-05
 
 ### Added
