@@ -1637,7 +1637,7 @@ class StreamingHandler(BaseHTTPRequestHandler):
             """
             self.wfile.write(html.encode())
 
-        elif path_only == "/stream":
+        elif path_only == "/stream" or path_only.startswith("/stream/"):
             # Stream the actual video
             self.send_response(200)
             self.send_header("Content-type", "multipart/x-mixed-replace; boundary=frame")
