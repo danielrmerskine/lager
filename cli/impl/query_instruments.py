@@ -102,6 +102,7 @@ SUPPORTED_USB: Dict[str, Dict[str, str | List[str] | None]] = {
     # watt-meter
     "Yocto_Watt": {"vid": "24e0", "pid": "002a", "net_type": ["watt-meter"]},
     "Joulescope_JS220": {"vid": "16d0", "pid": "10ba", "net_type": ["watt-meter", "energy-analyzer"]},
+    "Nordic_PPK2": {"vid": "1915", "pid": "c00a", "net_type": ["watt-meter", "energy-analyzer"]},
 
     # thermocouple
     "Phidget": {"vid": "06c2", "pid": "0046", "net_type": ["thermocouple"]},
@@ -184,6 +185,7 @@ CHANNEL_MAPS = {
     # watt-meter
     "Yocto_Watt":             {"watt-meter": ["0"]},
     "Joulescope_JS220":       {"watt-meter": ["0"], "energy-analyzer": ["0"]},
+    "Nordic_PPK2":            {"watt-meter": ["0"], "energy-analyzer": ["0"]},
 
     # thermocouple
     "Phidget":                {"thermocouple": ["0", "1", "2", "3"]},
@@ -489,7 +491,14 @@ def _scan_usb() -> List[dict]:
                 continue
 
         meta = SUPPORTED_USB[meta_name]
-        address = f"USB0::0x{vid.upper()}::0x{pid.upper()}::{serial or ''}::INSTR"
+
+        # PPK2 uses ppk2-api (USB CDC serial), not VISA/USBTMC.
+        # Store a ppk2:{serial} address so the dispatcher's _parse_location()
+        # can find the device via ppk2_api.list_devices().
+        if meta_name == "Nordic_PPK2":
+            address = f"ppk2:{serial or ''}"
+        else:
+            address = f"USB0::0x{vid.upper()}::0x{pid.upper()}::{serial or ''}::INSTR"
 
         entry = {
             "name": meta_name,
