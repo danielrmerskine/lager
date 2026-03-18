@@ -31,9 +31,12 @@ class EnergyAnalyzerDispatcher(BaseDispatcher):
         instrument_lower = instrument_name.lower()
         if 'joulescope' in instrument_lower or 'js220' in instrument_lower:
             return JoulescopeEnergyAnalyzer
+        if 'ppk2' in instrument_lower or 'ppk' in instrument_lower or 'nordic' in instrument_lower:
+            from .ppk2_energy import PPK2EnergyAnalyzer
+            return PPK2EnergyAnalyzer
         raise EnergyAnalyzerBackendError(
             f"Unsupported energy-analyzer instrument: '{instrument_name}'. "
-            "Only the Joulescope JS220 is supported."
+            "Supported instruments: Joulescope JS220, Nordic PPK2."
         )
 
     def _make_error(self, message: str) -> EnergyAnalyzerBackendError:

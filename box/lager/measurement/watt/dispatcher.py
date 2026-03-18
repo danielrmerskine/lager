@@ -74,6 +74,11 @@ class WattMeterDispatcher(BaseDispatcher):
             from .joulescope_js220 import JoulescopeJS220
             return JoulescopeJS220
 
+        # Check for Nordic PPK2 instruments
+        if 'ppk2' in instrument_lower or 'ppk' in instrument_lower or 'nordic' in instrument_lower:
+            from .ppk2_watt import PPK2Watt
+            return PPK2Watt
+
         # Default to Yoctopuce for watt meters
         return YoctoWatt
 

@@ -72,6 +72,7 @@ RUN /usr/local/bin/python -m pip install --upgrade pip \
 	'git+https://github.com/Yepkit/pykush@d83ee856b4d0ea961b63b531fe4f4c533f6962f6' \
 	'yoctopuce' \
 	'joulescope' \
+	'ppk2-api' \
 	'aardvark_py' \
 	'pyftdi' \
 	'Flask==3.0.0' \
