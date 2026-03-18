@@ -168,7 +168,17 @@ class PPK2Watt(WattMeterBase):
                 )
 
             try:
+                # PPK2 delivers data in chunks every ~100-200 ms via USB
+                # CDC serial.  Enforce a minimum so at least one full
+                # chunk is captured.
+                effective = max(duration, 0.3)
+
                 self._device.start_measuring()
+
+                # Discard the first chunk — it may contain stale samples
+                # from the previous measurement window.
+                time.sleep(0.05)
+                self._device.get_data()
 
                 # The PPK2 streams data continuously via USB CDC serial.
                 # We must read the serial buffer in a polling loop during
@@ -176,7 +186,7 @@ class PPK2Watt(WattMeterBase):
                 # often returns empty because the OS serial buffer has
                 # already been drained or overflowed.
                 chunks = []
-                deadline = time.time() + duration
+                deadline = time.time() + effective
                 while time.time() < deadline:
                     read_data = self._device.get_data()
                     if read_data is not None and len(read_data) > 0:
