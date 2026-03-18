@@ -175,14 +175,14 @@ class PPK2Watt(WattMeterBase):
                 # measurement; a single get_data() after stop_measuring()
                 # often returns empty because the OS serial buffer has
                 # already been drained or overflowed.
-                all_samples = []
+                chunks = []
                 deadline = time.time() + duration
                 while time.time() < deadline:
                     read_data = self._device.get_data()
                     if read_data is not None and len(read_data) > 0:
                         samples = self._device.get_samples(read_data)
                         if samples is not None and len(samples) > 0:
-                            all_samples.extend(samples)
+                            chunks.append(np.asarray(samples, dtype=np.float64))
                     time.sleep(0.01)  # 10 ms polling interval
 
                 self._device.stop_measuring()
@@ -192,15 +192,16 @@ class PPK2Watt(WattMeterBase):
                 if read_data is not None and len(read_data) > 0:
                     samples = self._device.get_samples(read_data)
                     if samples is not None and len(samples) > 0:
-                        all_samples.extend(samples)
+                        chunks.append(np.asarray(samples, dtype=np.float64))
 
-                if not all_samples:
+                if not chunks:
                     raise WattBackendError(
                         f"PPK2 '{self.name}' returned no samples"
                     )
 
                 # ppk2-api returns current in microamps; convert to amps
-                current_amps = np.array(all_samples, dtype=np.float64) * 1e-6
+                all_samples = np.concatenate(chunks)
+                current_amps = all_samples * 1e-6
                 voltage_v = self._voltage_mv / 1000.0
                 return (current_amps, voltage_v)
             except WattBackendError:
