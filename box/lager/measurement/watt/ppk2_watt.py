@@ -181,8 +181,16 @@ class PPK2Watt(WattMeterBase):
                     read_data = self._device.get_data()
                     if read_data is not None and len(read_data) > 0:
                         samples = self._device.get_samples(read_data)
-                        if samples is not None and len(samples) > 0:
-                            chunks.append(np.asarray(samples, dtype=np.float64))
+                        if samples is not None:
+                            # get_samples() returns a tuple/array of shape
+                            # (2, N) where row 0 is current in µA.  Extract
+                            # the current row and flatten to 1-D.
+                            arr = np.asarray(samples, dtype=np.float64)
+                            if arr.ndim == 2:
+                                arr = arr[0]
+                            arr = arr.ravel()
+                            if arr.size > 0:
+                                chunks.append(arr)
                     time.sleep(0.01)  # 10 ms polling interval
 
                 self._device.stop_measuring()
@@ -191,8 +199,13 @@ class PPK2Watt(WattMeterBase):
                 read_data = self._device.get_data()
                 if read_data is not None and len(read_data) > 0:
                     samples = self._device.get_samples(read_data)
-                    if samples is not None and len(samples) > 0:
-                        chunks.append(np.asarray(samples, dtype=np.float64))
+                    if samples is not None:
+                        arr = np.asarray(samples, dtype=np.float64)
+                        if arr.ndim == 2:
+                            arr = arr[0]
+                        arr = arr.ravel()
+                        if arr.size > 0:
+                            chunks.append(arr)
 
                 if not chunks:
                     raise WattBackendError(
