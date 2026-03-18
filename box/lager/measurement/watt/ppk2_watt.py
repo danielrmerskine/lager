@@ -115,7 +115,7 @@ class PPK2Watt(WattMeterBase):
 
             self._serial = serial
             self._voltage_mv = voltage_mv
-            self._device = None
+            self._port = None
 
             try:
                 devices = PPK2_API.list_devices()
@@ -129,23 +129,17 @@ class PPK2Watt(WattMeterBase):
                 last_err = None
                 for port in devices:
                     try:
-                        self._device = PPK2_API(port)
-                        self._device.get_modifiers()
-                        break  # success
+                        dev = PPK2_API(port)
+                        dev.get_modifiers()
+                        self._port = port
+                        del dev
+                        break
                     except Exception as e:
-                        self._device = None
                         last_err = e
                 else:
                     raise WattBackendError(
                         f"No usable PPK2 port among {devices}: {last_err}"
                     )
-
-                self._device.use_source_meter()
-                self._device.set_source_voltage(self._voltage_mv)
-
-                # Start measuring immediately and leave it running.
-                # read_raw() collects whatever accumulates during a window.
-                self._device.start_measuring()
             except WattBackendError:
                 raise
             except Exception as e:
@@ -156,28 +150,13 @@ class PPK2Watt(WattMeterBase):
             self._read_lock = threading.Lock()
             self._initialized = True
 
-    def _collect_samples(self) -> Optional[np.ndarray]:
-        """Read one chunk from the PPK2 serial buffer and return 1-D µA array, or None."""
-        read_data = self._device.get_data()
-        if read_data is None or len(read_data) == 0:
-            return None
-        samples = self._device.get_samples(read_data)
-        if samples is None:
-            return None
-        # get_samples() returns shape (2, N): row 0 = current µA.
-        arr = np.asarray(samples, dtype=np.float64)
-        if arr.ndim == 2:
-            arr = arr[0]
-        arr = arr.ravel()
-        return arr if arr.size > 0 else None
-
     def read_raw(self, duration: float) -> Tuple[np.ndarray, float]:
         """
         Collect current samples for `duration` seconds.
 
-        The PPK2 is kept in continuous measuring mode.  This method
-        drains stale data, waits for the requested duration while
-        polling for new data, then returns the collected samples.
+        The ppk2-api serial buffer only yields data once per connection,
+        so we open a fresh PPK2_API instance for every measurement:
+        open → configure → start → sleep → stop → get_data → close.
 
         Returns:
             Tuple of (current_samples_amps, voltage_volts).
@@ -185,43 +164,62 @@ class PPK2Watt(WattMeterBase):
             voltage_volts is the configured source voltage.
         """
         with self._read_lock:
-            if self._device is None:
+            if self._port is None:
                 raise WattBackendError(
                     f"PPK2 '{self.name}' is not connected"
                 )
 
+            # Enforce a minimum so the device has time to produce data.
+            effective = max(duration, 0.3)
+
             try:
-                # Drain any stale data sitting in the serial buffer.
-                self._collect_samples()
+                dev = PPK2_API(self._port)
+                dev.get_modifiers()
+                dev.use_source_meter()
+                dev.set_source_voltage(self._voltage_mv)
 
-                # PPK2 delivers chunks every ~100-200 ms.
-                # Enforce a minimum window so we get at least one chunk.
-                effective = max(duration, 0.3)
+                dev.start_measuring()
+                time.sleep(effective)
+                dev.stop_measuring()
 
-                chunks = []
-                deadline = time.time() + effective
-                while time.time() < deadline:
-                    chunk = self._collect_samples()
-                    if chunk is not None:
-                        chunks.append(chunk)
-                    time.sleep(0.01)
+                # Small delay for the last data to arrive on the serial bus
+                time.sleep(0.05)
+                read_data = dev.get_data()
 
-                if not chunks:
+                if read_data is None or len(read_data) == 0:
+                    del dev
                     raise WattBackendError(
-                        f"PPK2 '{self.name}' returned no samples"
+                        f"PPK2 '{self.name}' returned no data"
                     )
 
-                # ppk2-api returns current in microamps; convert to amps
-                all_samples = np.concatenate(chunks)
-                current_amps = all_samples * 1e-6
-                voltage_v = self._voltage_mv / 1000.0
-                return (current_amps, voltage_v)
+                samples = dev.get_samples(read_data)
+                del dev
             except WattBackendError:
                 raise
             except Exception as e:
                 raise WattBackendError(
                     f"Failed to read raw data from PPK2 '{self.name}': {e}"
                 ) from e
+
+            if samples is None:
+                raise WattBackendError(
+                    f"PPK2 '{self.name}' returned no samples"
+                )
+
+            # get_samples() returns shape (2, N): row 0 = current in µA.
+            arr = np.asarray(samples, dtype=np.float64)
+            if arr.ndim == 2:
+                arr = arr[0]
+            arr = arr.ravel()
+
+            if arr.size == 0:
+                raise WattBackendError(
+                    f"PPK2 '{self.name}' returned no samples"
+                )
+
+            current_amps = arr * 1e-6
+            voltage_v = self._voltage_mv / 1000.0
+            return (current_amps, voltage_v)
 
     def read(self) -> float:
         """
@@ -273,12 +271,7 @@ class PPK2Watt(WattMeterBase):
 
     def close(self) -> None:
         """Close the connection and release resources."""
-        if self._device is not None:
-            try:
-                self._device.stop_measuring()
-            except Exception:
-                pass
-            self._device = None
+        self._port = None
 
     def __del__(self) -> None:
         """Cleanup when instance is garbage collected."""

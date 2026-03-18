@@ -140,20 +140,12 @@ class TestPPK2Watt:
         yield
         PPK2Watt.clear_cache()
 
-    def _patch_time(self):
-        """Return side_effect for time.time that allows one loop iteration."""
-        # 1st call: set deadline (0.0 + 0.3 = 0.3)
-        # 2nd call: loop check (0.1 < 0.3 → enter loop, collect data)
-        # 3rd call: loop check (999 > 0.3 → exit loop)
-        return iter([0.0, 0.1, 999.0, 999.0]).__next__
-
     @patch("lager.measurement.watt.ppk2_watt.time")
     @patch("lager.measurement.watt.ppk2_watt.PPK2_API")
     def test_read_returns_correct_power(self, mock_api_module, mock_time):
         mock_api, mock_device = _make_mock_ppk2_api()
         mock_api_module.list_devices = mock_api.list_devices
         mock_api_module.return_value = mock_device
-        mock_time.time = MagicMock(side_effect=self._patch_time())
         mock_time.sleep = MagicMock()
 
         watt = PPK2Watt("test_net", 0, "ppk2:SN123")
@@ -169,7 +161,6 @@ class TestPPK2Watt:
         mock_api, mock_device = _make_mock_ppk2_api()
         mock_api_module.list_devices = mock_api.list_devices
         mock_api_module.return_value = mock_device
-        mock_time.time = MagicMock(side_effect=self._patch_time())
         mock_time.sleep = MagicMock()
 
         watt = PPK2Watt("test_net", 0, "ppk2:SN123")
@@ -194,7 +185,6 @@ class TestPPK2Watt:
         mock_api, mock_device = _make_mock_ppk2_api()
         mock_api_module.list_devices = mock_api.list_devices
         mock_api_module.return_value = mock_device
-        mock_time.time = MagicMock(side_effect=self._patch_time())
         mock_time.sleep = MagicMock()
 
         watt = PPK2Watt("test_net", 0, "ppk2:SN123")
@@ -213,7 +203,6 @@ class TestPPK2Watt:
         mock_api, mock_device = _make_mock_ppk2_api()
         mock_api_module.list_devices = mock_api.list_devices
         mock_api_module.return_value = mock_device
-        mock_time.time = MagicMock(side_effect=self._patch_time())
         mock_time.sleep = MagicMock()
 
         watt = PPK2Watt("test_net", 0, "ppk2:SN123")
@@ -227,7 +216,7 @@ class TestPPK2Watt:
         assert voltage_v == pytest.approx(3.3)
 
     @patch("lager.measurement.watt.ppk2_watt.PPK2_API")
-    def test_close_calls_stop_measuring(self, mock_api_module):
+    def test_close_clears_port(self, mock_api_module):
         mock_api, mock_device = _make_mock_ppk2_api()
         mock_api_module.list_devices = mock_api.list_devices
         mock_api_module.return_value = mock_device
@@ -235,7 +224,7 @@ class TestPPK2Watt:
         watt = PPK2Watt("test_net", 0, "ppk2:SN123")
         watt.close()
 
-        mock_device.stop_measuring.assert_called()
+        assert watt._port is None
 
     @patch("lager.measurement.watt.ppk2_watt.PPK2_API")
     def test_custom_voltage(self, mock_api_module):
@@ -246,7 +235,6 @@ class TestPPK2Watt:
         watt = PPK2Watt("test_net", 0, "ppk2:SN123:1800")
 
         assert watt.read_voltage() == pytest.approx(1.8)
-        mock_device.set_source_voltage.assert_called_with(1800)
 
 
 # ---------------------------------------------------------------------------
@@ -300,7 +288,6 @@ class TestPPK2WattSingleton:
 
         PPK2Watt.clear_cache()
         assert len(PPK2Watt._instances) == 0
-        mock_device.stop_measuring.assert_called()
 
 
 # ---------------------------------------------------------------------------
