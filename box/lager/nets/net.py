@@ -340,6 +340,10 @@ class Net:
                 mappings = item.get("mappings") or []
                 if mappings and isinstance(mappings[0], dict):
                     loc = mappings[0].get("location")
+            # Fall back to "address" if no "location" set.
+            # Needed for instruments (e.g. PPK2) whose address IS the location.
+            if loc is None:
+                loc = item.get("address")
             return loc
 
         for item in saved_nets:
