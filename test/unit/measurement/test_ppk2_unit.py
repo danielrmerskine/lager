@@ -141,9 +141,11 @@ class TestPPK2Watt:
         PPK2Watt.clear_cache()
 
     def _patch_time(self):
-        """Return side_effect for time.time that expires the loop after one call."""
-        # First call returns 0 (start), second call returns 999 (past deadline).
-        return iter([0.0, 999.0, 999.0]).__next__
+        """Return side_effect for time.time that allows one loop iteration."""
+        # 1st call: set deadline (0.0 + 0.3 = 0.3)
+        # 2nd call: loop check (0.1 < 0.3 → enter loop, collect data)
+        # 3rd call: loop check (999 > 0.3 → exit loop)
+        return iter([0.0, 0.1, 999.0, 999.0]).__next__
 
     @patch("lager.measurement.watt.ppk2_watt.time")
     @patch("lager.measurement.watt.ppk2_watt.PPK2_API")

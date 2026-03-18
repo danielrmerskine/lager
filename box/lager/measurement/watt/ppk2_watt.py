@@ -142,6 +142,10 @@ class PPK2Watt(WattMeterBase):
 
                 self._device.use_source_meter()
                 self._device.set_source_voltage(self._voltage_mv)
+
+                # Start measuring immediately and leave it running.
+                # read_raw() collects whatever accumulates during a window.
+                self._device.start_measuring()
             except WattBackendError:
                 raise
             except Exception as e:
@@ -152,9 +156,28 @@ class PPK2Watt(WattMeterBase):
             self._read_lock = threading.Lock()
             self._initialized = True
 
+    def _collect_samples(self) -> Optional[np.ndarray]:
+        """Read one chunk from the PPK2 serial buffer and return 1-D µA array, or None."""
+        read_data = self._device.get_data()
+        if read_data is None or len(read_data) == 0:
+            return None
+        samples = self._device.get_samples(read_data)
+        if samples is None:
+            return None
+        # get_samples() returns shape (2, N): row 0 = current µA.
+        arr = np.asarray(samples, dtype=np.float64)
+        if arr.ndim == 2:
+            arr = arr[0]
+        arr = arr.ravel()
+        return arr if arr.size > 0 else None
+
     def read_raw(self, duration: float) -> Tuple[np.ndarray, float]:
         """
         Collect current samples for `duration` seconds.
+
+        The PPK2 is kept in continuous measuring mode.  This method
+        drains stale data, waits for the requested duration while
+        polling for new data, then returns the collected samples.
 
         Returns:
             Tuple of (current_samples_amps, voltage_volts).
@@ -168,54 +191,20 @@ class PPK2Watt(WattMeterBase):
                 )
 
             try:
-                # PPK2 delivers data in chunks every ~100-200 ms via USB
-                # CDC serial.  Enforce a minimum so at least one full
-                # chunk is captured.
+                # Drain any stale data sitting in the serial buffer.
+                self._collect_samples()
+
+                # PPK2 delivers chunks every ~100-200 ms.
+                # Enforce a minimum window so we get at least one chunk.
                 effective = max(duration, 0.3)
 
-                self._device.start_measuring()
-
-                # Discard the first chunk — it may contain stale samples
-                # from the previous measurement window.
-                time.sleep(0.05)
-                self._device.get_data()
-
-                # The PPK2 streams data continuously via USB CDC serial.
-                # We must read the serial buffer in a polling loop during
-                # measurement; a single get_data() after stop_measuring()
-                # often returns empty because the OS serial buffer has
-                # already been drained or overflowed.
                 chunks = []
                 deadline = time.time() + effective
                 while time.time() < deadline:
-                    read_data = self._device.get_data()
-                    if read_data is not None and len(read_data) > 0:
-                        samples = self._device.get_samples(read_data)
-                        if samples is not None:
-                            # get_samples() returns a tuple/array of shape
-                            # (2, N) where row 0 is current in µA.  Extract
-                            # the current row and flatten to 1-D.
-                            arr = np.asarray(samples, dtype=np.float64)
-                            if arr.ndim == 2:
-                                arr = arr[0]
-                            arr = arr.ravel()
-                            if arr.size > 0:
-                                chunks.append(arr)
-                    time.sleep(0.01)  # 10 ms polling interval
-
-                self._device.stop_measuring()
-
-                # Drain any remaining data after stop
-                read_data = self._device.get_data()
-                if read_data is not None and len(read_data) > 0:
-                    samples = self._device.get_samples(read_data)
-                    if samples is not None:
-                        arr = np.asarray(samples, dtype=np.float64)
-                        if arr.ndim == 2:
-                            arr = arr[0]
-                        arr = arr.ravel()
-                        if arr.size > 0:
-                            chunks.append(arr)
+                    chunk = self._collect_samples()
+                    if chunk is not None:
+                        chunks.append(chunk)
+                    time.sleep(0.01)
 
                 if not chunks:
                     raise WattBackendError(
